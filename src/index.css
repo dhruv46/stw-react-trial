@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sidebar-width: 80px;
+    --sidebar-width-open: 256px;
+  }
+  html, body, #root { height: 100%; }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white dark:bg-neutral-800 shadow-soft border border-neutral-100 dark:border-neutral-700;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-neutral-100 dark:bg-neutral-700;
+  }
+}
