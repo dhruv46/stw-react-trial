@@ -79,7 +79,7 @@ const nav: NavItem[] = [
    Component
 ======================= */
 
-const Topbar: React.FC = () => {
+const Navbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [activeSubMenu, setActiveSubMenu] = useState<number | null>(null);
@@ -92,14 +92,21 @@ const Topbar: React.FC = () => {
   const [isDesktop, setIsDesktop] = useState(false);
 
   /* =======================
-     Outside Click
-  ======================= */
-
+   Outside Click
+======================= */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        // Desktop dropdowns
         setActiveMenu(null);
         setActiveSubMenu(null);
+
+        // Mobile dropdown
+        setUserMenuOpen(false);
+
+        // Optional: reset mobile sub states
+        setMobileActive(null);
+        setMobileSubActive(null);
       }
     };
 
@@ -478,4 +485,4 @@ const Topbar: React.FC = () => {
   );
 };
 
-export default Topbar;
+export default Navbar;

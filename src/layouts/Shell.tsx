@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import Topbar from '../components/Topbar'
+import Topbar from '../components/Navbar'
 import MarketBar from '../components/MarketBar'
 import LeftRail from '../components/LeftRail'
 
