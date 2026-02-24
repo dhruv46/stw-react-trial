@@ -165,14 +165,6 @@ const Navbar: React.FC = () => {
     <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white">
       <div className="mx-auto px-3 sm:px-6 py-2">
         <div className="flex items-center gap-2" ref={menuRef}>
-          {/* Mobile Button */}
-          <button
-            className="md:hidden"
-            onClick={() => setMobileOpen((prev) => !prev)}
-          >
-            <Menu size={18} />
-          </button>
-
           <div className="hidden xl1300:flex items-center gap-10 text-xs pr-3">
             {/* NIFTY */}
             <div className="flex flex-col min-w-[150px]">
