@@ -1,10 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ['class'],
-  content: [
-    "./index.html",
-    "./src/**/*.{ts,tsx}"
-  ],
+  darkMode: ["class"],
+  content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -18,13 +15,16 @@ export default {
           600: "#0e75db",
           700: "#095db0",
           800: "#094f8e",
-          900: "#0b416f"
-        }
+          900: "#0b416f",
+        },
       },
       boxShadow: {
-        soft: "0 8px 24px rgba(0,0,0,0.08)"
-      }
-    }
+        soft: "0 8px 24px rgba(0,0,0,0.08)",
+      },
+      screens: {
+        xl1300: "1300px",
+      },
+    },
   },
-  plugins: []
-}
+  plugins: [],
+};

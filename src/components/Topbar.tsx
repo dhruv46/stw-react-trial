@@ -1,118 +1,481 @@
-import React, { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
-import { Moon, Search, SunMedium, LogOut, User, Menu } from 'lucide-react'
+import React, { useEffect, useRef, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { LogOut, User, Menu, ChevronDown, ChevronRight } from "lucide-react";
 
-const nav = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/orders', label: 'Orders' },
-  { to: '/holdings', label: 'Holdings' },
-  { to: '/positions', label: 'Positions' },
-  { to: '/watchlists', label: 'Watchlists' },
-  { to: '/markets', label: 'Markets' },
-  { to: '/funds', label: 'Funds' },
-  { to: '/profile', label: 'Profile' },
-]
+/* =======================
+   Types
+======================= */
 
-export default function Topbar() {
-  const [dark, setDark] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem('theme') === 'dark' ||
-      (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  })
-  const [open, setOpen] = useState(false)
+interface NavItem {
+  label: string;
+  to?: string;
+  children?: NavItem[];
+}
+
+/* =======================
+   Navigation Config
+======================= */
+
+const nav: NavItem[] = [
+  { to: "/", label: "Home" },
+  {
+    label: "Orders",
+    children: [
+      { to: "/order", label: "Order Book" },
+      { to: "/sim-order-book", label: "Sim Order Book" },
+    ],
+  },
+  {
+    label: "Trades",
+    children: [
+      { to: "/trades", label: "Trade Book" },
+      { to: "/trade-edit-mode", label: "Edit Mode" },
+      { to: "/sim-trade-book", label: "Sim Trade Book" },
+    ],
+  },
+  { to: "/manual-execution", label: "Manual Execution" },
+  {
+    label: "Positions",
+    children: [
+      { to: "/position?mode=client", label: "By Client" },
+      { to: "/position?mode=strategy", label: "By Strategy" },
+    ],
+  },
+  { to: "/holding", label: "Holdings" },
+  {
+    label: "Downloads",
+    children: [
+      { to: "/report", label: "Strategy Report" },
+      { to: "/download-report", label: "OHLC" },
+    ],
+  },
+  { to: "/strategy-setting", label: "Auto Strategy" },
+  {
+    label: "Settings",
+    children: [
+      { to: "/user-list", label: "User List" },
+      { to: "/brokerage", label: "Brokerage" },
+      { to: "/holiday", label: "Holiday" },
+      { to: "/exceptional", label: "Exceptional" },
+      {
+        label: "Broker Settings",
+        children: [
+          { to: "/greek-soft", label: "Greek Soft" },
+          { to: "/iifl", label: "IIFL" },
+          { to: "/zerodha", label: "Zerodha" },
+          { to: "/true-data", label: "True Data" },
+          { to: "/master-trust", label: "Master Trust" },
+        ],
+      },
+      { to: "/client-data", label: "Client Data" },
+      { to: "/charges", label: "Charges" },
+      { to: "/money-management", label: "Money Management" },
+      { to: "/contract-note", label: "Contract Note" },
+    ],
+  },
+];
+
+/* =======================
+   Component
+======================= */
+
+const Topbar: React.FC = () => {
+  const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [activeSubMenu, setActiveSubMenu] = useState<number | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const [mobileActive, setMobileActive] = useState<number | null>(null);
+  const [mobileSubActive, setMobileSubActive] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  /* =======================
+     Outside Click
+  ======================= */
 
   useEffect(() => {
-    const root = document.documentElement
-    if (dark) {
-      root.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
-    } else {
-      root.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
-    }
-  }, [dark])
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveMenu(null);
+        setActiveSubMenu(null);
+      }
+    };
 
-  // close menu on route change (basic: close on resize too)
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  /* =======================
+   Desktop / Mobile Detection
+======================= */
   useEffect(() => {
-    const onResize = () => { if (window.innerWidth >= 768) setOpen(false) }
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+    const handleResize = () => {
+      const desktop = window.innerWidth >= 1024;
+      setIsDesktop(desktop);
+
+      if (desktop) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    handleResize(); // run once on mount
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  /* =======================
+     Resize Handler
+  ======================= */
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  /* =======================
+     Toggle Functions
+  ======================= */
+
+  const toggleMenu = (index: number) => {
+    setActiveMenu((prev) => (prev === index ? null : index));
+    setActiveSubMenu(null);
+  };
+
+  const toggleSubMenu = (index: number) => {
+    setActiveSubMenu((prev) => (prev === index ? null : index));
+  };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 backdrop-blur">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2">
-        {/* Row: burger + search (left), center nav on md+, profile on right */}
-        <div className="flex items-center gap-2">
-          {/* Mobile hamburger */}
-          <button className="md:hidden btn" aria-label="Toggle navigation" onClick={() => setOpen(v => !v)}>
+    <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white">
+      <div className="mx-auto px-3 sm:px-6 py-2">
+        <div className="flex items-center gap-2" ref={menuRef}>
+          {/* Mobile Button */}
+          <button
+            className="md:hidden"
+            onClick={() => setMobileOpen((prev) => !prev)}
+          >
             <Menu size={18} />
           </button>
 
-          {/* Search - left aligned, grows */}
-          <div className="relative flex-1 max-w-sm">
-            <input
-              placeholder="Search eg: infy, nifty fut, index fund, etc"
-              className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white/80 dark:bg-neutral-800 pl-10 pr-3 py-2 outline-none focus:ring-2 ring-brand-400"
-            />
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60" />
+          <div className="hidden xl1300:flex items-center gap-10 text-xs pr-3">
+            {/* NIFTY */}
+            <div className="flex flex-col min-w-[150px]">
+              <span className="font-semibold text-gray-700 tracking-wide">
+                NIFTY 50
+              </span>
+
+              <div className="flex items-center gap-3 tabular-nums">
+                <span className="text-red-600 font-semibold">25404.00</span>
+                <span className="text-gray-500">-309.00 (-1.20%)</span>
+              </div>
+            </div>
+
+            {/* SENSEX */}
+            <div className="flex flex-col min-w-[150px]">
+              <span className="font-semibold text-gray-700 tracking-wide">
+                SENSEX
+              </span>
+
+              <div className="flex items-center gap-3 tabular-nums">
+                <span className="text-red-600 font-semibold">82130.21</span>
+                <span className="text-gray-500">-1164.45 (-1.40%)</span>
+              </div>
+            </div>
           </div>
 
-          {/* Desktop: centered nav occupies middle via separate container below; here keep spacer */}
-          <div className="hidden md:flex flex-1 justify-center">
+          <div className="w-px self-stretch bg-gray-300 hidden xl1300:block"></div>
+          {/* Logo */}
+          <div className="flex items-center">
+            <img
+              src="/stw-favicon.ico"
+              alt="STW Logo"
+              className="h-5 w-6 object-contain"
+            />
+          </div>
+          {/* Desktop Menu */}
+          <div className="hidden lg:flex flex-1 justify-end mr-2">
             <nav>
-              <ul className="flex gap-1">
-                {nav.map(i => (
-                  <li key={i.to}>
-                    <NavLink
-                      to={i.to}
-                      className={({isActive}) =>
-                        `px-3 py-2 text-sm rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800 font-medium' : ''}`
-                      }
-                      end={i.to==='/'}
-                    >
-                      {i.label}
-                    </NavLink>
+              <ul className="flex gap-6 text-xs">
+                {nav.map((item, index) => (
+                  <li key={index} className="relative">
+                    {/* Normal Link */}
+                    {item.to && !item.children && (
+                      <NavLink
+                        to={item.to}
+                        end={item.to === "/"}
+                        className={({ isActive }) =>
+                          isActive
+                            ? "text-blue-600 font-medium"
+                            : "text-neutral-700 hover:text-blue-600"
+                        }
+                      >
+                        {item.label}
+                      </NavLink>
+                    )}
+
+                    {/* Dropdown Parent */}
+                    {item.children && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => toggleMenu(index)}
+                          className="flex items-center gap-1 text-neutral-700 hover:text-blue-600"
+                        >
+                          {item.label}
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${
+                              activeMenu === index ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {activeMenu === index && (
+                          <ul className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+                            {item.children.map((child, idx) => (
+                              <li key={idx} className="relative">
+                                {/* Normal Child */}
+                                {child.to && !child.children && (
+                                  <NavLink
+                                    to={child.to}
+                                    onClick={() => {
+                                      setActiveMenu(null);
+                                      setActiveSubMenu(null);
+                                    }}
+                                    className={({ isActive }) =>
+                                      `block px-3 py-2 text-xs rounded-md transition ${
+                                        isActive
+                                          ? "bg-gray-100 text-blue-600"
+                                          : "text-gray-700 hover:bg-gray-100"
+                                      }`
+                                    }
+                                  >
+                                    {child.label}
+                                  </NavLink>
+                                )}
+
+                                {/* Second Level */}
+                                {child.children && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSubMenu(idx)}
+                                      className="flex items-center justify-between w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-md transition"
+                                    >
+                                      {child.label}
+
+                                      <ChevronRight
+                                        size={14}
+                                        className={`ml-2 transition-transform ${
+                                          activeSubMenu === idx
+                                            ? "rotate-90"
+                                            : ""
+                                        }`}
+                                      />
+                                    </button>
+
+                                    {/* SUB MENU - Changed left-full to right-full */}
+                                    {activeSubMenu === idx && (
+                                      <ul className="absolute right-full top-0 mr-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                                        {child.children.map((sub, i) => (
+                                          <li key={i}>
+                                            <NavLink
+                                              to={sub.to!}
+                                              onClick={() => {
+                                                setActiveMenu(null);
+                                                setActiveSubMenu(null);
+                                              }}
+                                              className={({ isActive }) =>
+                                                `block px-3 py-2 text-xs rounded-md transition ${
+                                                  isActive
+                                                    ? "bg-gray-100 text-blue-600"
+                                                    : "text-gray-700 hover:bg-gray-100"
+                                                }`
+                                              }
+                                            >
+                                              {sub.label}
+                                            </NavLink>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
             </nav>
           </div>
 
-          {/* Right actions */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => setDark(v => !v)} className="btn" title="Toggle theme">
-              {dark ? <SunMedium size={18} /> : <Moon size={18} />}
+          <div className="block lg:hidden w-full"></div>
+          {/* Right Icons */}
+          <div className="relative flex items-end gap-5">
+            {/* User Icon */}
+            <button
+              onClick={() => {
+                if (isDesktop) {
+                  navigate("/userInfo");
+                } else {
+                  setUserMenuOpen((prev) => !prev);
+                }
+              }}
+              className="text-neutral-700 hover:text-blue-600"
+            >
+              <User size={18} />
             </button>
-            <NavLink to="/profile" className="btn" title="Profile"><User size={18} /></NavLink>
-            <NavLink to="/login" className="btn text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" title="Logout">
+
+            {/* Logout */}
+            <NavLink
+              to="/login"
+              className="text-neutral-700 hover:text-red-500"
+            >
               <LogOut size={18} />
             </NavLink>
+
+            {/* MOBILE NAV DROPDOWN */}
+            {!isDesktop && userMenuOpen && (
+              <div className="absolute right-0 top-8 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2 lg:hidden max-h-[70vh] overflow-y-auto">
+                {/* USER INFO LINK */}
+                <NavLink
+                  to="/userInfo"
+                  onClick={() => setUserMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `block px-3 py-2 text-xs rounded-md font-medium mb-1 transition ${
+                      isActive
+                        ? "bg-gray-100 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`
+                  }
+                >
+                  My Profile
+                </NavLink>
+
+                <div className="border-t border-gray-200 mb-1"></div>
+                {nav.map((item, index) => (
+                  <div key={index} className="mb-1">
+                    {/* Direct Link */}
+                    {item.to && !item.children && (
+                      <NavLink
+                        to={item.to}
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-3 py-2 text-xs rounded-md text-gray-700 hover:bg-gray-100"
+                      >
+                        {item.label}
+                      </NavLink>
+                    )}
+
+                    {/* Parent Item */}
+                    {item.children && (
+                      <>
+                        <button
+                          onClick={() =>
+                            setMobileActive(
+                              mobileActive === index ? null : index,
+                            )
+                          }
+                          className="flex justify-between items-center w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-md"
+                        >
+                          {item.label}
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${
+                              mobileActive === index ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {/* Children */}
+                        {mobileActive === index && (
+                          <div className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3">
+                            {item.children.map((child, idx) => {
+                              const subKey = `${index}-${idx}`;
+
+                              return (
+                                <div key={idx}>
+                                  {/* Child Direct */}
+                                  {child.to && !child.children && (
+                                    <NavLink
+                                      to={child.to}
+                                      onClick={() => setUserMenuOpen(false)}
+                                      className="block px-3 py-2 text-xs rounded-md text-gray-600 hover:bg-gray-100"
+                                    >
+                                      {child.label}
+                                    </NavLink>
+                                  )}
+
+                                  {/* Sub Parent */}
+                                  {child.children && (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          setMobileSubActive(
+                                            mobileSubActive === subKey
+                                              ? null
+                                              : subKey,
+                                          )
+                                        }
+                                        className="flex justify-between items-center w-full px-3 py-2 text-xs text-gray-600 hover:bg-gray-100 rounded-md"
+                                      >
+                                        {child.label}
+                                        <ChevronRight
+                                          size={14}
+                                          className={`transition-transform ${
+                                            mobileSubActive === subKey
+                                              ? "rotate-90"
+                                              : ""
+                                          }`}
+                                        />
+                                      </button>
+
+                                      {mobileSubActive === subKey && (
+                                        <div className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3">
+                                          {child.children.map((sub, i) => (
+                                            <NavLink
+                                              key={i}
+                                              to={sub.to!}
+                                              onClick={() =>
+                                                setUserMenuOpen(false)
+                                              }
+                                              className="block px-3 py-2 text-xs rounded-md text-gray-500 hover:bg-gray-100"
+                                            >
+                                              {sub.label}
+                                            </NavLink>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Mobile nav drawer (drops under the row) */}
-        {open && (
-          <nav className="md:hidden mt-2">
-            <ul className="flex flex-wrap gap-1">
-              {nav.map(i => (
-                <li key={i.to} className="flex-1 min-w-[45%]">
-                  <NavLink
-                    to={i.to}
-                    className={({isActive}) =>
-                      `block text-center px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800 font-medium' : ''}`
-                  }
-                  end={i.to==='/'}
-                  onClick={() => setOpen(false)}
-                  >
-                    {i.label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
       </div>
     </header>
-  )
-}
+  );
+};
+
+export default Topbar;
