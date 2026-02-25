@@ -1,15 +1,58 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Lock, Mail, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Lock, ArrowRight, Eye, EyeOff, User } from "lucide-react";
 import bgImage from "/login-bg-3.avif"; // adjust path if needed
+import { loginApi, getMeApi } from "../services/authApi"; // adjust path
 
 export default function Login() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  // useEffect(() => {
+  //   getMeApi()
+  //     .then((res) => {
+  //       console.log("User:", res.data);
+  //     })
+  //     .catch(() => {});
+  // }, []);
+
+  //set the items in the cookie instead of localStorage
+  function setItem(key: string, value: string, days?: number) {
+    let cookieString = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; path=/;`;
+    if (days) {
+      const date = new Date();
+      date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+      cookieString += `expires=${date.toUTCString()};`;
+    }
+    document.cookie = cookieString;
+  }
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    nav("/"); // redirect to dashboard
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await loginApi({
+        username,
+        password,
+      });
+
+      console.log("Login successful:", res.data);
+
+      // 2️⃣ Store the token in cookie for 7 days
+      setItem("access_token", res.data.access_token, 7);
+      navigate("/", { replace: true }); // ✅ navigate after login localStorage.setItem("token", res.data.access_token);
+    } catch (err: any) {
+      setError(err.response?.data?.error_description || "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,13 +85,15 @@ export default function Login() {
                 Username
               </label>
               <div className="relative group">
-                <Mail
+                <User
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-blue-600 transition-colors"
                   size={18}
                 />
                 <input
-                  type="email"
+                  type="text"
                   required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="username"
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all"
                 />
@@ -73,6 +118,8 @@ export default function Login() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all"
                 />
@@ -110,13 +157,20 @@ export default function Login() {
             </div>
 
             {/* Submit Button */}
-            <button className="group w-full flex items-center justify-center gap-2 rounded-xl py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all">
-              Sign in
+            <button
+              disabled={loading}
+              className="group w-full flex items-center justify-center gap-2 rounded-xl py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
+            >
+              {loading ? "Signing in..." : "Sign in"}
               <ArrowRight
                 size={18}
                 className="group-hover:translate-x-1 transition-transform"
               />
             </button>
+
+            {error && (
+              <div className="text-sm text-red-500 text-center">{error}</div>
+            )}
           </form>
         </div>
       </div>

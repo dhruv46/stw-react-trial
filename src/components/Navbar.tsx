@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { LogOut, User, Menu, ChevronDown, ChevronRight } from "lucide-react";
+import { LogOut, User, ChevronDown, ChevronRight } from "lucide-react";
+import socketService from "../services/socketService";
+import { logoutApi } from "../services/authApi";
 
 /* =======================
    Types
@@ -91,6 +93,18 @@ const Navbar: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
+  // Store market data for both instruments
+  const [marketData, setMarketData] = useState<{
+    [key: string]: {
+      Price: number;
+      ChangeValue: number;
+      PercentChange: number;
+    } | null;
+  }>({
+    "1_26000": null, // NIFTY
+    "11_26065": null, // SENSEX
+  });
+
   /* =======================
    Outside Click
 ======================= */
@@ -112,6 +126,38 @@ const Navbar: React.FC = () => {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    socketService.connect();
+
+    const instruments = ["1_26000", "11_26065"];
+
+    instruments.forEach((inst) => {
+      socketService.subscribe(`tick_message_${inst}`, (frame: any) => {
+        try {
+          const outer = JSON.parse(frame.body);
+          const inner = JSON.parse(outer.data);
+
+          setMarketData((prev) => ({
+            ...prev,
+            [inst]: {
+              Price: inner.Price,
+              ChangeValue: inner.ChangeValue,
+              PercentChange: inner.PercentChange,
+            },
+          }));
+        } catch (err) {
+          console.error("Failed to parse frame:", err);
+        }
+      });
+    });
+
+    return () => {
+      instruments.forEach((inst) => {
+        socketService.unsubscribe(`tick_message_${inst}`);
+      });
+    };
   }, []);
 
   /* =======================
@@ -171,10 +217,17 @@ const Navbar: React.FC = () => {
               <span className="font-semibold text-gray-700 tracking-wide">
                 NIFTY 50
               </span>
-
               <div className="flex items-center gap-3 tabular-nums">
-                <span className="text-red-600 font-semibold">25404.00</span>
-                <span className="text-gray-500">-309.00 (-1.20%)</span>
+                <span
+                  className={`font-semibold ${marketData["1_26000"]?.PercentChange! >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
+                  {marketData["1_26000"]?.Price?.toFixed(2) ?? "0.00"}
+                </span>
+                <span className="text-gray-500">
+                  {marketData["1_26000"]
+                    ? `${marketData["1_26000"]?.ChangeValue?.toFixed(2)} (${marketData["1_26000"]?.PercentChange?.toFixed(2)}%)`
+                    : "0.00 (0.00%)"}
+                </span>
               </div>
             </div>
 
@@ -183,10 +236,21 @@ const Navbar: React.FC = () => {
               <span className="font-semibold text-gray-700 tracking-wide">
                 SENSEX
               </span>
-
               <div className="flex items-center gap-3 tabular-nums">
-                <span className="text-red-600 font-semibold">82130.21</span>
-                <span className="text-gray-500">-1164.45 (-1.40%)</span>
+                <span
+                  className={`font-semibold ${
+                    marketData["11_26065"]?.PercentChange! >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {marketData["11_26065"]?.Price?.toFixed(2) ?? "0.00"}
+                </span>
+                <span className="text-gray-500">
+                  {marketData["11_26065"]
+                    ? `${marketData["11_26065"]?.ChangeValue?.toFixed(2)} (${marketData["11_26065"]?.PercentChange?.toFixed(2)}%)`
+                    : "0.00 (0.00%)"}
+                </span>
               </div>
             </div>
           </div>
@@ -340,9 +404,8 @@ const Navbar: React.FC = () => {
 
             {/* Logout */}
             <NavLink
-              to="/login"
-              className="text-neutral-700 hover:text-red-500"
-            >
+              onClick={logoutApi}
+              className="text-neutral-700 hover:text-red-500" to={""}            >
               <LogOut size={18} />
             </NavLink>
 
