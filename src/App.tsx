@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
@@ -16,16 +16,21 @@ import Topbar from "./components/Navbar";
 import MarketBar from "./components/MarketBar";
 import LeftRail from "./components/LeftRail";
 import AuthGuard from "./pages/AuthGuard";
+import SimOrderBook from "./pages/SimOrderBook";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => !prev);
+  };
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
       <Topbar />
-      <MarketBar />
+      {/* <MarketBar /> */}
       <div className="flex">
-        <LeftRail />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full mx-auto">
+        <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <main className="flex-1  w-full mx-auto">
           <Outlet />
         </main>
       </div>
@@ -46,14 +51,14 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Dashboard /> },
-      { path: "orders", element: <Orders /> },
+      { path: "sim-order-book", element: <SimOrderBook /> },
+      { path: "order", element: <SimOrderBook /> },
       { path: "holdings", element: <Holdings /> },
       { path: "positions", element: <Positions /> },
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
       { path: "markets", element: <Markets /> },
       { path: "profile", element: <Profile /> },
-      { path: "order", element: <OrderPad /> },
     ],
   },
 ]);
