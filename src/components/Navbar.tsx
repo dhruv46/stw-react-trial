@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { LogOut, User, ChevronDown, ChevronRight } from "lucide-react";
 import socketService from "../services/socketService";
 import { logoutApi, InstrumentLTP } from "../services/authApi";
@@ -82,6 +82,7 @@ const nav: NavItem[] = [
 ======================= */
 
 const Navbar: React.FC = () => {
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [activeSubMenu, setActiveSubMenu] = useState<number | null>(null);
@@ -339,13 +340,18 @@ const Navbar: React.FC = () => {
                                       setActiveMenu(null);
                                       setActiveSubMenu(null);
                                     }}
-                                    className={({ isActive }) =>
-                                      `block px-3 py-2 text-xs rounded-md transition ${
+                                    className={() => {
+                                      // Check if current URL matches the link's URL exactly
+                                      const isActive =
+                                        location.pathname + location.search ===
+                                        child.to;
+
+                                      return `block px-3 py-2 text-xs rounded-md transition ${
                                         isActive
-                                          ? "bg-gray-100 text-blue-600"
+                                          ? "bg-gray-100 text-blue-600 font-medium"
                                           : "text-gray-700 hover:bg-gray-100"
-                                      }`
-                                    }
+                                      }`;
+                                    }}
                                   >
                                     {child.label}
                                   </NavLink>

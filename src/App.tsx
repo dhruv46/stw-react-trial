@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import {
+  useLocation,
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+} from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
 import Orders from "./pages/Orders";
@@ -24,6 +29,7 @@ function Layout() {
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };
+
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
       <Topbar />
@@ -38,6 +44,11 @@ function Layout() {
   );
 }
 
+function PositionWrapper() {
+  const { search, pathname } = useLocation();
+  // The key changes every time the query string (?mode=...) changes
+  return <Positions key={pathname + search} />;
+}
 /* ✅ Router Configuration */
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
@@ -54,7 +65,7 @@ const router = createBrowserRouter([
       { path: "sim-order-book", element: <SimOrderBook /> },
       { path: "order", element: <SimOrderBook /> },
       { path: "holdings", element: <Holdings /> },
-      { path: "positions", element: <Positions /> },
+      { path: "position", element: <PositionWrapper /> },
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
       { path: "markets", element: <Markets /> },
