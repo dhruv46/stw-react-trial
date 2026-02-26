@@ -30,6 +30,9 @@ export const getMeApi = () => {
   return API.get("/users/me");
 };
 
+export const InstrumentLTP = () => {
+  return API.get("/fetch_index_instrument_ltp");
+};
 export const forgotPasswordApi = (email: string) => {
   return API.post("/forgot-password", { email });
 };

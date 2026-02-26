@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { LogOut, User, ChevronDown, ChevronRight } from "lucide-react";
 import socketService from "../services/socketService";
-import { logoutApi } from "../services/authApi";
+import { logoutApi, InstrumentLTP } from "../services/authApi";
 
 /* =======================
    Types
@@ -158,6 +158,31 @@ const Navbar: React.FC = () => {
         socketService.unsubscribe(`tick_message_${inst}`);
       });
     };
+  }, []);
+
+  useEffect(() => {
+    const fetchLTP = async () => {
+      try {
+        const response = await InstrumentLTP();
+        const result = response.data?.result || [];
+
+        // Convert array into a key-value object like { "1_26000": {...}, "11_26065": {...} }
+        const formattedData = result.reduce((acc: any, item: any) => {
+          acc[item.iifl] = {
+            Price: item.ltp ?? 0,
+            ChangeValue: item.ChangeValue ?? 0,
+            PercentChange: item.PercentChange ?? 0,
+          };
+          return acc;
+        }, {});
+
+        setMarketData(formattedData);
+      } catch (err) {
+        console.error("Failed to fetch initial LTP:", err);
+      }
+    };
+
+    fetchLTP(); // Call the async function
   }, []);
 
   /* =======================
@@ -405,7 +430,9 @@ const Navbar: React.FC = () => {
             {/* Logout */}
             <NavLink
               onClick={logoutApi}
-              className="text-neutral-700 hover:text-red-500" to={""}            >
+              className="text-neutral-700 hover:text-red-500"
+              to={""}
+            >
               <LogOut size={18} />
             </NavLink>
 
