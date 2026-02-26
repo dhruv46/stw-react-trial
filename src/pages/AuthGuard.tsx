@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getMeApi } from "../services/authApi";
+import "../style/boxLoader.css";
 
 interface AuthGuardProps {
   children: JSX.Element;
@@ -27,9 +28,23 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-neutral-700 dark:text-neutral-300">
-          Checking authentication...
-        </p>
+        <div className="load-wrapper">
+          <div className="box-wrapper">
+            <div>
+              <span></span>
+            </div>
+            <div>
+              <span></span>
+            </div>
+            <div>
+              <span></span>
+            </div>
+            <div>
+              <span></span>
+            </div>
+          </div>
+          <p>loading!..</p>
+        </div>
       </div>
     );
   }
