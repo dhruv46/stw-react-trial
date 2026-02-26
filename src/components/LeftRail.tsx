@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import { mockWatchlist } from "../mock/data";
 import { Plus, Settings2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -17,11 +15,11 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
   return (
     <aside
       className={`
-        hidden lg:flex lg:flex-col
+        hidden xl:flex xl:flex-col
         transition-all duration-300
         border-r border-neutral-200 dark:border-neutral-800
         h-[calc(100vh-56px)] sticky top-[56px]
-        ${isOpen ? "w-[320px]" : "w-[60px]"}
+        ${isOpen ? "w-[300px]" : "w-[40px]"}
       `}
     >
       {/* Toggle Button */}

@@ -7,7 +7,11 @@
     --sidebar-width: 80px;
     --sidebar-width-open: 256px;
   }
-  html, body, #root { height: 100%; }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
 }
 
 @layer components {
@@ -20,4 +24,133 @@
   .chip {
     @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-neutral-100 dark:bg-neutral-700;
   }
+}
+
+/* Target the internal antd table body */
+.ant-table-body {
+  overflow-y: auto !important;
+}
+
+/* Optional: To make the scrollbar look cleaner and "hide" 
+   the rail background in Chrome/Safari/Edge */
+.ant-table-body::-webkit-scrollbar {
+  width: 6px; /* Very thin scrollbar */
+}
+
+.ant-table-body::-webkit-scrollbar-track {
+  background: transparent; /* Makes the "rail" invisible */
+}
+
+.ant-table-body::-webkit-scrollbar-thumb {
+  background: #d1d5db; /* Light gray handle */
+  border-radius: 10px;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* 1. Hide the vertical 'rail' when data is short */
+.custom-scrollbar-table .ant-table-body {
+  overflow-y: auto !important;
+}
+
+/* 2. Optional: Make the scrollbar thin and modern like a trading terminal */
+.custom-scrollbar-table .ant-table-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar-table .ant-table-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar-table .ant-table-body::-webkit-scrollbar-thumb {
+  background: #e2e8f0; /* slate-200 */
+  border-radius: 10px;
+}
+
+.custom-scrollbar-table .ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1; /* slate-300 */
+}
+
+/* 1. Hide the vertical scrollbar track when there is no data or nothing to scroll */
+.ant-table-body {
+  overflow-y: auto !important;
+}
+
+/* 2. Fix the header clumping in 'No Data' state */
+.ant-table-placeholder {
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+/* 3. Make scrollbars thin and professional */
+.ant-table-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ant-table-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+/* 1. Remove the empty vertical rail when there is no data to scroll */
+.ant-table-body {
+  overflow-y: auto !important;
+}
+
+/* 2. Ensure the 'No Data' placeholder doesn't break the layout */
+.ant-table-placeholder .ant-table-expanded-row-fixed {
+  width: 100% !important;
+}
+
+/* 3. Hide the 'rail' background to make it look clean */
+.ant-table-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 4. Optional: Make the horizontal scrollbar look better */
+.ant-table-body::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* Unified Ant Design Table Fix */
+.ant-table-body {
+  overflow-y: auto !important; /* Removes the permanent vertical rail */
+  overflow-x: auto !important;
+}
+
+/* Fixes Header Clumping when No Data is present */
+.ant-table-placeholder .ant-table-expanded-row-fixed {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+/* Custom Modern Scrollbars */
+.ant-table-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ant-table-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

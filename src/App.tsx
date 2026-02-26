@@ -30,7 +30,7 @@ function Layout() {
       {/* <MarketBar /> */}
       <div className="flex">
         <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <main className="flex-1  w-full mx-auto">
+        <main className="flex-1 min-w-0 overflow-hidden bg-slate-100">
           <Outlet />
         </main>
       </div>
