@@ -6,7 +6,7 @@ import {
   Outlet,
 } from "react-router-dom";
 
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Home";
 import Orders from "./pages/Orders";
 import Holdings from "./pages/Holdings";
 import Positions from "./pages/Positions";
@@ -22,6 +22,7 @@ import MarketBar from "./components/MarketBar";
 import LeftRail from "./components/LeftRail";
 import AuthGuard from "./pages/AuthGuard";
 import SimOrderBook from "./pages/SimOrderBook";
+import Home from "./pages/Home";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -61,7 +62,7 @@ const router = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
-      { index: true, element: <Dashboard /> },
+      { index: true, element: <Home /> },
       { path: "sim-order-book", element: <SimOrderBook /> },
       { path: "order", element: <SimOrderBook /> },
       { path: "holding", element: <Holdings /> },

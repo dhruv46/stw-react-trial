@@ -37,7 +37,7 @@
 //   return children;
 // }
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getMeApi } from "../services/authApi";
 import Loader from "../components/Loader";
@@ -79,18 +79,21 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ✅ Prevent double execution
+  const hasFetched = useRef(false);
+
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
     getMeApi()
       .then((response) => {
         const user = response.data;
-
-        /* ================= Cookie Sync ================= */
 
         const cookieFullName = getCookie("full_name");
         const cookieEmail = getCookie("email");
         const cookieUsername = getCookie("username");
 
-        // Only update if changed or missing
         if (cookieFullName !== user.full_name) {
           setCookie("full_name", user.full_name);
         }
@@ -104,8 +107,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         }
 
         setLoading(false);
-
-        /* ================= Redirect Logic ================= */
 
         if (location.pathname === "/login" || location.pathname === "/forgot") {
           navigate("/", { replace: true });

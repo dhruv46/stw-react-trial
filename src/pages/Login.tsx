@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Lock, ArrowRight, Eye, EyeOff, User } from "lucide-react";
 import bgImage from "/login-bg-3.avif"; // adjust path if needed
-import { loginApi, getMeApi } from "../services/authApi"; // adjust path
+import { loginApi } from "../services/authApi"; // adjust path
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,14 +11,6 @@ export default function Login() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
-
-  // useEffect(() => {
-  //   getMeApi()
-  //     .then((res) => {
-  //       console.log("User:", res.data);
-  //     })
-  //     .catch(() => {});
-  // }, []);
 
   //set the items in the cookie instead of localStorage
   function setItem(key: string, value: string, days?: number) {
