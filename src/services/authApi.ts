@@ -38,11 +38,16 @@ export const forgotPasswordApi = (email: string) => {
 };
 
 // src/services/authApi.ts
-export const logoutApi = () => {
-  // Remove the access_token cookie
-  document.cookie =
-    "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
-  // Optional: redirect to login page
+export const logoutApi = () => {
+  const cookies = document.cookie.split(";");
+
+  cookies.forEach((cookie) => {
+    const cookieName = cookie.split("=")[0].trim();
+
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+  });
+
+  // Redirect to login
   window.location.href = "/login";
 };
