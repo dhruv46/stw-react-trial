@@ -269,9 +269,9 @@ export default function SimOrderBook() {
     },
   ];
 
-   if (loading) {
-      return <Loader />;
-    }
+  if (loading) {
+    return <Loader />;
+  }
 
   return (
     <div className="bg-slate-100 p-2 sm:p-4 static">
@@ -517,8 +517,6 @@ export default function SimOrderBook() {
             }}
           /> */}
 
-
-
           <Table
             columns={columns}
             dataSource={orders} // Add dummy row when empty
@@ -527,6 +525,7 @@ export default function SimOrderBook() {
             rowKey="key"
             tableLayout="fixed"
             pagination={{
+              position: ["bottomRight"] as const,
               current: currentPage,
               pageSize: pageSize,
               showSizeChanger: true,
@@ -535,7 +534,7 @@ export default function SimOrderBook() {
                 setCurrentPage(page);
                 setPageSize(newPageSize);
               },
-              placement: "bottomRight", // ✅ Changed from position.placement to position
+
               showTotal: (total) =>
                 total === 0 ? null : `Showing ${total} orders`,
             }}

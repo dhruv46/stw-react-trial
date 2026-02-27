@@ -23,6 +23,7 @@ import LeftRail from "./components/LeftRail";
 import AuthGuard from "./pages/AuthGuard";
 import SimOrderBook from "./pages/SimOrderBook";
 import Home from "./pages/Home";
+import UserList from "./pages/Settings/UserList";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -71,6 +72,7 @@ const router = createBrowserRouter([
       { path: "watchlists", element: <Watchlists /> },
       { path: "markets", element: <Markets /> },
       { path: "profile", element: <Profile /> },
+      { path: "user-list", element: <UserList /> },
     ],
   },
 ]);
