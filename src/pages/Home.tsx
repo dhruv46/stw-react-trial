@@ -1,143 +1,8 @@
-// import React, { useEffect, useState } from "react";
-// import { getPositionList } from "../services/HomeApi";
-
-// /* --- Helper to get Cookie --- */
-// const getCookie = (name: string): string => {
-//   const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-//   // console.log("Cookie Match for", name, ":", match); // Debug log
-
-//   if (match) {
-//     return decodeURIComponent(match[2]);
-//   }
-
-//   return "User";
-// };
-// export default function Home() {
-//   const [positions, setPositions] = useState<any[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const fullName = getCookie("full_name");
-
-//   useEffect(() => {
-//     getPositionList()
-//       .then((res) => {
-//         // console.log("Position List:", res.data); // Debug log
-//         // Based on your JSON structure, data is in res.result
-//         setPositions(res.data?.result || []);
-//       })
-//       .catch((err) => console.error("Error fetching positions:", err))
-//       .finally(() => setLoading(false));
-//   }, []);
-
-//   if (loading)
-//     return (
-//       <div className="p-6 text-center text-gray-500">Loading positions...</div>
-//     );
-
-//   return (
-//     <div className="bg-gray-50 min-h-screen p-6 font-sans">
-//       {/* Greeting Header */}
-//       <div className="flex items-center gap-2 mb-6">
-//         <h1 className="text-2xl font-normal text-gray-800">
-//           Hi, <span className="font-medium">{fullName}</span>
-//         </h1>
-//       </div>
-
-//       {/* Table Container */}
-//       <div className="bg-white rounded shadow-sm overflow-hidden border border-gray-100">
-//         <div className="overflow-x-auto">
-//           <table className="w-full text-left border-collapse">
-//             <thead className="bg-gray-50 border-b border-gray-200">
-//               <tr>
-//                 <th className="px-4 py-3 text-sm font-bold text-black">
-//                   Strategy
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black">
-//                   Display Name
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black">
-//                   Created Datetime
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black text-right">
-//                   Qty
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black text-right">
-//                   Ltp
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black text-right">
-//                   Buy Price
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black text-right">
-//                   Sell Price
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black text-right">
-//                   P&L
-//                 </th>
-//                 <th className="px-4 py-3 text-sm font-bold text-black text-right">
-//                   Chg(%)
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody className="divide-y divide-gray-100">
-//               {positions.map((item) => {
-//                 // Calculate P&L: (LTP - BuyPrice) * Qty
-//                 const pnlValue =
-//                   (item.ltp - item.last_trade_price) * item.quantity;
-//                 const pnlColor =
-//                   pnlValue >= 0 ? "text-green-500" : "text-red-500";
-//                 const chgColor =
-//                   item.PercentChange >= 0 ? "text-green-500" : "text-red-500";
-
-//                 return (
-//                   <tr
-//                     key={item.id}
-//                     className="hover:bg-gray-50 transition-colors"
-//                   >
-//                     <td className="px-4 py-4 text-sm text-gray-700">
-//                       {item.name}
-//                     </td>
-//                     <td className="px-4 py-4 text-sm text-gray-700">
-//                       {item.DisplayName}
-//                     </td>
-//                     <td className="px-4 py-4 text-sm text-gray-600 font-light">
-//                       {item.create_datetime}
-//                     </td>
-//                     <td className="px-4 py-4 text-sm text-gray-700 text-right">
-//                       {item.quantity}
-//                     </td>
-//                     <td className="px-4 py-4 text-sm text-gray-700 text-right font-medium">
-//                       {item.ltp.toFixed(2)}
-//                     </td>
-//                     <td className="px-4 py-4 text-sm text-gray-700 text-right">
-//                       {item.last_trade_price.toFixed(2)}
-//                     </td>
-//                     <td className="px-4 py-4 text-sm text-gray-700 text-right">
-//                       {item.sell_value.toFixed(2)}
-//                     </td>
-//                     <td
-//                       className={`px-4 py-4 text-sm text-right font-medium ${pnlColor}`}
-//                     >
-//                       {pnlValue.toFixed(2)}
-//                     </td>
-//                     <td
-//                       className={`px-4 py-4 text-sm text-right font-medium ${chgColor}`}
-//                     >
-//                       {item.PercentChange.toFixed(2)}%
-//                     </td>
-//                   </tr>
-//                 );
-//               })}
-//             </tbody>
-//           </table>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-import React, { useEffect, useMemo, useState } from "react";
-import { Card, Table, Typography, Spin } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { Card, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { getPositionList } from "../services/HomeApi";
+import Loader from "../components/Loader";
 
 const { Text } = Typography;
 
@@ -261,11 +126,7 @@ export default function Home() {
   /* ================= Loading ================= */
 
   if (loading) {
-    return (
-      <div className="h-screen flex justify-center items-center">
-        <Spin size="large" />
-      </div>
-    );
+    return <Loader />;
   }
 
   /* ================= UI ================= */

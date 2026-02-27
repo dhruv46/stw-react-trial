@@ -14,6 +14,7 @@ import {
   getStrategyListApi,
 } from "../services/orderService";
 import { useLocation } from "react-router-dom";
+import Loader from "../components/Loader";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -268,6 +269,10 @@ export default function SimOrderBook() {
     },
   ];
 
+   if (loading) {
+      return <Loader />;
+    }
+
   return (
     <div className="bg-slate-100 p-2 sm:p-4 static">
       <div className="bg-white rounded-t-lg border-b px-3 sm:px-4 py-3 shadow-sm">
@@ -511,6 +516,8 @@ export default function SimOrderBook() {
               },
             }}
           /> */}
+
+
 
           <Table
             columns={columns}
