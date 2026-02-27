@@ -154,3 +154,39 @@
 .ant-table-body::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ===== Compact Trading Table ===== */
+/* 
+.compact-trade-table .ant-table {
+  font-size: 5px;
+} */
+
+/* Reduce table header height */
+.compact-trade-table .ant-table-thead > tr > th {
+  padding: 4px 8px !important;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+/* Reduce body row height */
+.compact-trade-table .ant-table-tbody > tr > td {
+  padding: 3px 8px !important;
+}
+
+/* Summary row compact */
+.compact-trade-table .ant-table-summary > tr > td {
+  padding: 4px 8px !important;
+}
+
+/* .compact-trade-table .ant-table-row {
+  height: 30px;
+} */
+
+.ant-card-small > .ant-card-head {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.ant-card-head-title {
+  padding: 6px 0 !important;
+}
