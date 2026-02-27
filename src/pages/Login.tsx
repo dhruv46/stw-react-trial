@@ -43,7 +43,7 @@ export default function Login() {
         password,
       });
 
-      console.log("Login successful:", res.data);
+      // console.log("Login successful:", res.data);
 
       // 2️⃣ Store the token in cookie for 7 days
       setItem("access_token", res.data.access_token, 7);

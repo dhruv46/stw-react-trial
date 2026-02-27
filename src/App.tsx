@@ -64,7 +64,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "sim-order-book", element: <SimOrderBook /> },
       { path: "order", element: <SimOrderBook /> },
-      { path: "holdings", element: <Holdings /> },
+      { path: "holding", element: <Holdings /> },
       { path: "position", element: <PositionWrapper /> },
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
