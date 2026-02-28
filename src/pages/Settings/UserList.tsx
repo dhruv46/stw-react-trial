@@ -40,6 +40,7 @@ export default function UserList() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetLoadingId, setResetLoadingId] = useState<number | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
 
   /* ✅ Modal State */
   const [openModal, setOpenModal] = useState(false);
@@ -158,18 +159,44 @@ export default function UserList() {
         />
       ),
     },
+    // {
+    //   title: "Action",
+    //   align: "center",
+    //   width: 90,
+    //   render: () => (
+    //     <Button
+    //       type="text"
+    //       size="small"
+    //       icon={<FaPen style={{ color: "#facc15" }} />}
+    //     />
+    //   ),
+    // },
     {
       title: "Action",
       align: "center",
       width: 90,
-      render: () => (
+      render: (_, record) => (
         <Button
           type="text"
           size="small"
           icon={<FaPen style={{ color: "#facc15" }} />}
+          onClick={() => {
+            setEditingUser(record);
+            setOpenModal(true);
+
+            form.setFieldsValue({
+              username: record.username,
+              full_name: record.full_name,
+              email: record.email,
+              enabled: record.enabled,
+              user_role: record.user_role,
+
+              password: undefined, // don't prefill password
+            });
+          }}
         />
       ),
-    },
+    }
   ];
 
   /* ================= Submit ================= */
@@ -179,7 +206,7 @@ export default function UserList() {
       setSaving(true);
 
       const payload = {
-        id: 0,
+        id: editingUser ? editingUser.id : 0,
         username: values.username,
         full_name: values.full_name || "",
         email: values.email || "",
@@ -256,7 +283,7 @@ export default function UserList() {
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
             <span className="text-sm font-semibold text-gray-800">
-              Add User
+              {editingUser ? "Edit User" : "Add User"}
             </span>
           </div>
         }
@@ -276,23 +303,30 @@ export default function UserList() {
           form={form}
           size="small"
           onFinish={handleSubmit}
-          initialValues={{ enabled: true }}
+          initialValues={{ enabled: false }}
           className="space-y-2"
         >
           {/* Username */}
           <Form.Item
-            label={<span className="text-xs font-medium">Username *</span>}
+            label={<span className="text-xs font-medium">Username</span>}
             name="username"
             className="mb-1"
+            rules={[
+              { required: true, message: "Username is required" }
+            ]}
           >
             <Input placeholder="Enter username" className="h-8 rounded" />
           </Form.Item>
 
           {/* Password */}
           <Form.Item
-            label={<span className="text-xs font-medium">Password *</span>}
+            label={<span className="text-xs font-medium">Password</span>}
             name="password"
             className="mb-1"
+            rules={[
+              { required: true, message: "Password is required" },
+              { min: 6, message: "Password must be at least 6 characters" },
+            ]}
           >
             <Input.Password
               placeholder="Enter password"
@@ -305,6 +339,9 @@ export default function UserList() {
             label={<span className="text-xs font-medium">Full Name</span>}
             name="full_name"
             className="mb-1"
+            rules={[
+              { required: true, message: "Full name is required" },
+            ]}
           >
             <Input placeholder="Full name" className="h-8 rounded" />
           </Form.Item>
@@ -314,6 +351,10 @@ export default function UserList() {
             label={<span className="text-xs font-medium">Email</span>}
             name="email"
             className="mb-1"
+            rules={[
+              { required: true, message: "Email is required" },
+              { type: "email", message: "Enter valid email address" },
+            ]}
           >
             <Input placeholder="email@example.com" className="h-8 rounded" />
           </Form.Item>
@@ -323,6 +364,9 @@ export default function UserList() {
             label={<span className="text-xs font-medium">User Role</span>}
             name="user_role"
             className="mb-1"
+            rules={[
+              { required: true, message: "Please select role" },
+            ]}
           >
             <Select placeholder="Select role" className="rounded">
               <Select.Option value="Admin">Admin</Select.Option>
@@ -336,6 +380,9 @@ export default function UserList() {
             label={<span className="text-xs font-medium">Client</span>}
             name="client"
             className="mb-1"
+            rules={[
+              { required: true, message: "Please select client" },
+            ]}
           >
             <Select
               placeholder="Select client"
