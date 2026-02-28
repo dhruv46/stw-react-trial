@@ -228,3 +228,17 @@
 .compact-user-table .ant-table {
   font-size: 12px;
 }
+
+/* compact form validation */
+.compact-user-modal .ant-form-item-explain-error {
+  font-size: 10px;
+  margin-top: 1px;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.compact-user-modal .ant-form-item-has-error input,
+.compact-user-modal .ant-form-item-has-error .ant-select-selector {
+  border-color: #ef4444 !important;
+  box-shadow: none !important;
+}

@@ -21,6 +21,9 @@ import {
   getEnabledClientList,
   addUpdateUser,
   resetUserPasswordApi,
+  getStrategyByClientId,
+  FetchStrategyList,
+  getUserById,
 } from "../../services/SettingsService/userSettingsApi";
 
 const { Text } = Typography;
@@ -41,6 +44,10 @@ export default function UserList() {
   const [saving, setSaving] = useState(false);
   const [resetLoadingId, setResetLoadingId] = useState<number | null>(null);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [clientStrategies, setClientStrategies] = useState<number[]>([]);
+  const [strategyList, setStrategyList] = useState<any[]>([]);
+  const [selectedStrategies, setSelectedStrategies] = useState<number[]>([]);
+  const [strategyLoading, setStrategyLoading] = useState(false);
 
   /* ✅ Modal State */
   const [openModal, setOpenModal] = useState(false);
@@ -92,6 +99,33 @@ export default function UserList() {
       setResetLoadingId(null);
     }
   };
+
+  const handleClientChange = async (clientId: number) => {
+    try {
+      setSelectedStrategies([]);
+      setStrategyLoading(true);
+
+      // ✅ get strategy ids of client
+      const res1 = await getStrategyByClientId(clientId);
+
+      const strategyIds = res1?.data?.result?.[0]?.strategy_id || [];
+
+      setClientStrategies(strategyIds);
+
+      // ✅ fetch all strategies
+      const res2 = await FetchStrategyList();
+
+      setStrategyList(res2?.data?.result || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setStrategyLoading(false);
+    }
+  };
+
+  const mappedStrategies = strategyList.filter((strategy) =>
+    clientStrategies.includes(strategy.id),
+  );
 
   /* ================= Columns ================= */
 
@@ -180,23 +214,65 @@ export default function UserList() {
           type="text"
           size="small"
           icon={<FaPen style={{ color: "#facc15" }} />}
-          onClick={() => {
-            setEditingUser(record);
-            setOpenModal(true);
+          onClick={async () => {
+            try {
+              setOpenModal(true);
+              setStrategyLoading(true);
 
-            form.setFieldsValue({
-              username: record.username,
-              full_name: record.full_name,
-              email: record.email,
-              enabled: record.enabled,
-              user_role: record.user_role,
+              // ✅ fetch full user data
+              const res = await getUserById(record.id);
 
-              password: undefined, // don't prefill password
-            });
+              const user = res?.data?.result?.[0];
+
+              if (!user) return;
+
+              setEditingUser(user);
+
+              const clientId = user.user_clients?.[0];
+
+              // ✅ set form values
+              form.setFieldsValue({
+                username: user.username,
+                full_name: user.full_name,
+                email: user.email,
+                enabled: user.enabled,
+                user_role: user.user_role,
+                client: clientId,
+              });
+
+              // ==========================
+              // Load Client Strategies
+              // ==========================
+
+              if (clientId) {
+                const res1 = await getStrategyByClientId(clientId);
+
+                const strategyIds = res1?.data?.result?.[0]?.strategy_id || [];
+
+                setClientStrategies(strategyIds);
+
+                const res2 = await FetchStrategyList();
+
+                const allStrategies = res2?.data?.result || [];
+
+                setStrategyList(allStrategies);
+
+                // ✅ already selected strategies
+                const selected =
+                  user.user_client_strategy?.[clientId]?.[0] || [];
+
+                setSelectedStrategies(selected);
+              }
+            } catch (error) {
+              console.error(error);
+              message.error("Failed to load user");
+            } finally {
+              setStrategyLoading(false);
+            }
           }}
         />
       ),
-    }
+    },
   ];
 
   /* ================= Submit ================= */
@@ -205,6 +281,7 @@ export default function UserList() {
     try {
       setSaving(true);
 
+      const clientId = values.client;
       const payload = {
         id: editingUser ? editingUser.id : 0,
         username: values.username,
@@ -213,7 +290,12 @@ export default function UserList() {
         enabled: values.enabled ?? true,
         user_role: values.user_role,
         user_clients: values.client ? [values.client] : [],
-        user_client_strategy: {},
+        // ✅ build payload correctly
+        user_client_strategy: clientId
+          ? {
+              [clientId]: [selectedStrategies],
+            }
+          : {},
         hashed_password: values.password,
       };
 
@@ -251,7 +333,13 @@ export default function UserList() {
             size="small"
             icon={<FaPlus size={12} />}
             className="flex items-center !px-3 !h-7 shadow-sm"
-            onClick={() => setOpenModal(true)}
+            onClick={() => {
+              setEditingUser(null);
+              setSelectedStrategies([]);
+              setClientStrategies([]);
+              form.resetFields();
+              setOpenModal(true);
+            }}
           >
             Add User
           </Button>
@@ -311,37 +399,36 @@ export default function UserList() {
             label={<span className="text-xs font-medium">Username</span>}
             name="username"
             className="mb-1"
-            rules={[
-              { required: true, message: "Username is required" }
-            ]}
+            rules={[{ required: true, message: "Username is required" }]}
           >
             <Input placeholder="Enter username" className="h-8 rounded" />
           </Form.Item>
 
           {/* Password */}
-          <Form.Item
-            label={<span className="text-xs font-medium">Password</span>}
-            name="password"
-            className="mb-1"
-            rules={[
-              { required: true, message: "Password is required" },
-              { min: 6, message: "Password must be at least 6 characters" },
-            ]}
-          >
-            <Input.Password
-              placeholder="Enter password"
-              className="h-8 rounded"
-            />
-          </Form.Item>
+          {/* Password (Only Add Mode) */}
+          {!editingUser && (
+            <Form.Item
+              label={<span className="text-xs font-medium">Password</span>}
+              name="password"
+              className="mb-1"
+              rules={[
+                { required: true, message: "Password is required" },
+                { min: 6, message: "Password must be at least 6 characters" },
+              ]}
+            >
+              <Input.Password
+                placeholder="Enter password"
+                className="h-8 rounded"
+              />
+            </Form.Item>
+          )}
 
           {/* Full Name */}
           <Form.Item
             label={<span className="text-xs font-medium">Full Name</span>}
             name="full_name"
             className="mb-1"
-            rules={[
-              { required: true, message: "Full name is required" },
-            ]}
+            rules={[{ required: true, message: "Full name is required" }]}
           >
             <Input placeholder="Full name" className="h-8 rounded" />
           </Form.Item>
@@ -364,9 +451,7 @@ export default function UserList() {
             label={<span className="text-xs font-medium">User Role</span>}
             name="user_role"
             className="mb-1"
-            rules={[
-              { required: true, message: "Please select role" },
-            ]}
+            rules={[{ required: true, message: "Please select role" }]}
           >
             <Select placeholder="Select role" className="rounded">
               <Select.Option value="Admin">Admin</Select.Option>
@@ -376,13 +461,11 @@ export default function UserList() {
           </Form.Item>
 
           {/* Client */}
+
           <Form.Item
             label={<span className="text-xs font-medium">Client</span>}
             name="client"
-            className="mb-1"
-            rules={[
-              { required: true, message: "Please select client" },
-            ]}
+            rules={[{ required: true, message: "Please select client" }]}
           >
             <Select
               placeholder="Select client"
@@ -391,11 +474,60 @@ export default function UserList() {
               optionFilterProp="label"
               className="rounded"
               options={enabledClients.map((client) => ({
-                label: client.name,
+                label: `${client.id} - ${client.name}`,
                 value: client.id,
               }))}
+              onChange={handleClientChange}
             />
           </Form.Item>
+
+          {mappedStrategies.length > 0 && (
+            <div className="mt-1">
+              {/* Header */}
+              <div className="text-[11px] font-semibold text-gray-700 mb-1 border-b pb-[2px]">
+                Strategy{" "}
+                {
+                  enabledClients.find(
+                    (client) => client.id === form.getFieldValue("client"),
+                  )?.name
+                }
+              </div>
+
+              {/* Strategy List */}
+              <div className="max-h-36 overflow-y-auto border rounded-md px-2 py-2 bg-gray-50 space-y-[2px]">
+                {mappedStrategies.map((strategy) => (
+                  <label
+                    key={strategy.id}
+                    className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:bg-gray-100 rounded px-1 py-[5px]"
+                  >
+                    {/* Small Checkbox */}
+                    <input
+                      type="checkbox"
+                      className="w-2.3 h-2.3 cursor-pointer accent-blue-600"
+                      checked={selectedStrategies.includes(strategy.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedStrategies((prev) => [
+                            ...prev,
+                            strategy.id,
+                          ]);
+                        } else {
+                          setSelectedStrategies((prev) =>
+                            prev.filter((id) => id !== strategy.id),
+                          );
+                        }
+                      }}
+                    />
+
+                    {/* Text */}
+                    <span className="leading-none text-gray-700">
+                      {strategy.id}_{strategy.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Enabled */}
           <div className="flex items-center justify-between bg-gray-50 border rounded px-3 py-2 mt-1">
@@ -426,7 +558,7 @@ export default function UserList() {
               loading={saving}
               className="h-8 px-5 text-xs font-medium"
             >
-              Create
+              {editingUser ? "Update" : "Create"}
             </Button>
           </div>
         </Form>

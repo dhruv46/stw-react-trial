@@ -49,3 +49,25 @@ export const resetUserPasswordApi = (data: ResetUserPassword) => {
 
   return API.post(`/reset_user_password?${params.toString()}`);
 };
+
+// ================================
+// Get Strategy By Id
+// ================================
+export const getStrategyByClientId = (clientId: number) => {
+  return API.get(`/get_strategy_by_client?client_id=${clientId}`);
+};
+
+// ================================
+// Fetch Holdings
+// ================================
+
+export const FetchStrategyList = () => {
+  return API.get("/fetch_strategy_list");
+};
+
+// ================================
+// Fetch User By ID
+// ================================
+export const getUserById = (userId: number) => {
+  return API.get(`/get_user_list_by_id?user_id=${userId}`);
+};
