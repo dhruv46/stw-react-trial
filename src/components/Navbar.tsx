@@ -30,12 +30,12 @@ const nav: NavItem[] = [
   {
     label: "Trades",
     children: [
-      { to: "/trades", label: "Trade Book" },
-      { to: "/trade-edit-mode", label: "Edit Mode" },
-      { to: "/sim-trade-book", label: "Sim Trade Book" },
+      { to: "javascript:void(0)", label: "Trade Book" },
+      { to: "javascript:void(0)", label: "Edit Mode" },
+      { to: "javascript:void(0)", label: "Sim Trade Book" },
     ],
   },
-  { to: "/manual-execution", label: "Manual Execution" },
+  { to: "javascript:void(0)", label: "Manual Execution" },
   {
     label: "Positions",
     children: [
@@ -47,32 +47,32 @@ const nav: NavItem[] = [
   {
     label: "Downloads",
     children: [
-      { to: "/report", label: "Strategy Report" },
-      { to: "/download-report", label: "OHLC" },
+      { to: "javascript:void(0)", label: "Strategy Report" },
+      { to: "javascript:void(0)", label: "OHLC" },
     ],
   },
-  { to: "/strategy-setting", label: "Auto Strategy" },
+  { to: "javascript:void(0)", label: "Auto Strategy" },
   {
     label: "Settings",
     children: [
       { to: "/user-list", label: "User List" },
-      { to: "/brokerage", label: "Brokerage" },
-      { to: "/holiday", label: "Holiday" },
-      { to: "/exceptional", label: "Exceptional" },
+      { to: "javascript:void(0)", label: "Brokerage" },
+      { to: "javascript:void(0)", label: "Holiday" },
+      { to: "javascript:void(0)", label: "Exceptional" },
       {
         label: "Broker Settings",
         children: [
-          { to: "/greek-soft", label: "Greek Soft" },
-          { to: "/iifl", label: "IIFL" },
-          { to: "/zerodha", label: "Zerodha" },
-          { to: "/true-data", label: "True Data" },
-          { to: "/master-trust", label: "Master Trust" },
+          { to: "javascript:void(0)", label: "Greek Soft" },
+          { to: "javascript:void(0)", label: "IIFL" },
+          { to: "javascript:void(0)", label: "Zerodha" },
+          { to: "javascript:void(0)", label: "True Data" },
+          { to: "javascript:void(0)", label: "Master Trust" },
         ],
       },
-      { to: "/client-data", label: "Client Data" },
-      { to: "/charges", label: "Charges" },
-      { to: "/money-management", label: "Money Management" },
-      { to: "/contract-note", label: "Contract Note" },
+      { to: "javascript:void(0)", label: "Client Data" },
+      { to: "javascript:void(0)", label: "Charges" },
+      { to: "javascript:void(0)", label: "Money Management" },
+      { to: "javascript:void(0)", label: "Contract Note" },
     ],
   },
 ];
@@ -423,7 +423,7 @@ const Navbar: React.FC = () => {
             <button
               onClick={() => {
                 if (isDesktop) {
-                  navigate("/userInfo");
+                  navigate("javascript:void(0)");
                 } else {
                   setUserMenuOpen((prev) => !prev);
                 }
@@ -447,7 +447,7 @@ const Navbar: React.FC = () => {
               <div className="absolute right-0 top-8 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2 lg:hidden max-h-[70vh] overflow-y-auto">
                 {/* USER INFO LINK */}
                 <NavLink
-                  to="/userInfo"
+                  to="javascript:void(0)"
                   onClick={() => setUserMenuOpen(false)}
                   className={({ isActive }) =>
                     `block px-3 py-2 text-xs rounded-md font-medium mb-1 transition ${

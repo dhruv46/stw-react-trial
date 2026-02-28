@@ -49,7 +49,8 @@ export default function Home() {
   useEffect(() => {
     getPositionList()
       .then((res) => {
-        setPositions(res.data?.result || []);
+        const result = res.data?.result;
+        setPositions(Array.isArray(result) ? result : []);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
