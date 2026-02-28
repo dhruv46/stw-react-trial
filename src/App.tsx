@@ -25,6 +25,8 @@ import SimOrderBook from "./pages/SimOrderBook";
 import Home from "./pages/Home";
 import UserList from "./pages/Settings/UserList";
 import UserInfo from "./pages/UserInfo";
+import StrategyReport from "./pages/StrategyReport";
+import DownloadReport from "./pages/DownloadReport";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -69,10 +71,12 @@ const router = createBrowserRouter([
       { path: "order", element: <SimOrderBook /> },
       { path: "holding", element: <Holdings /> },
       { path: "position", element: <PositionWrapper /> },
+      { path: "report", element: <StrategyReport /> },
+      { path: "download-report", element: <DownloadReport /> },
+
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
       { path: "markets", element: <Markets /> },
-      { path: "profile", element: <Profile /> },
       { path: "user-list", element: <UserList /> },
       { path: "userinfo", element: <UserInfo /> },
     ],

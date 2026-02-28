@@ -47,8 +47,8 @@ const nav: NavItem[] = [
   {
     label: "Downloads",
     children: [
-      { to: "javascript:void(0)", label: "Strategy Report" },
-      { to: "javascript:void(0)", label: "OHLC" },
+      { to: "/report", label: "Strategy Report" },
+      { to: "/download-report", label: "OHLC" },
     ],
   },
   { to: "javascript:void(0)", label: "Auto Strategy" },
