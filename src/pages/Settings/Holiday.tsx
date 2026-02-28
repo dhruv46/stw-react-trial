@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 
 import { FiEdit2 } from "react-icons/fi";
 import { MdDeleteOutline } from "react-icons/md";
+import Loader from "../../components/Loader";
 
 const { Title } = Typography;
 
@@ -80,36 +81,36 @@ const Holiday = () => {
     {
       title: "ID",
       dataIndex: "id",
-    //   width: 80,
+      //   width: 80,
       align: "center",
     },
     {
       title: "Name",
       dataIndex: "name",
-    //   width: 160,
+      //   width: 160,
     },
     {
       title: "Date",
       dataIndex: "date",
-    //   width: 160,
+      //   width: 160,
       render: (value: number) =>
         value ? dayjs(value).format("DD MMM YYYY") : "-",
     },
     {
       title: "Morning Session",
       dataIndex: "morning_session",
-    //   width: 180,
+      //   width: 180,
       align: "center",
     },
     {
       title: "Evening Session",
       dataIndex: "evening_session",
-    //   width: 180,
+      //   width: 180,
       align: "center",
     },
     {
       title: "Action",
-    //   width: 120,
+      //   width: 120,
       align: "center",
       render: (_, record) => (
         <Space size={6}>
@@ -130,6 +131,10 @@ const Holiday = () => {
       ),
     },
   ];
+
+  if (loading) {
+    return <Loader />;
+  }
 
   return (
     <div className="h-[calc(100vh-65px)] bg-slate-100 p-3 overflow-hidden">

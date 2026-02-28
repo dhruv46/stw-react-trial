@@ -25,6 +25,7 @@ import {
   FetchStrategyList,
   getUserById,
 } from "../../services/SettingsService/userSettingsApi";
+import Loader from "../../components/Loader";
 
 const { Text } = Typography;
 
@@ -315,6 +316,10 @@ export default function UserList() {
 
   /* ================= UI ================= */
 
+  if (loading) {
+    return <Loader />;
+  }
+
   return (
     <div className="bg-gray-100 min-h-screen p-3">
       <Card size="small" className="shadow-sm rounded-lg">
@@ -350,7 +355,6 @@ export default function UserList() {
           rowKey="id"
           columns={columns}
           dataSource={users}
-          loading={loading}
           size="small"
           bordered
           pagination={{
