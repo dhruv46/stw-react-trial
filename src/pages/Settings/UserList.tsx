@@ -10,6 +10,7 @@ import {
   Input,
   Select,
   Switch,
+  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { FaLock } from "react-icons/fa";
@@ -18,6 +19,8 @@ import { FaPen, FaPlus } from "react-icons/fa6";
 import {
   getUserList,
   getEnabledClientList,
+  addUpdateUser,
+  resetUserPasswordApi,
 } from "../../services/SettingsService/userSettingsApi";
 
 const { Text } = Typography;
@@ -35,6 +38,8 @@ export default function UserList() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [enabledClients, setEnabledClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [resetLoadingId, setResetLoadingId] = useState<number | null>(null);
 
   /* ✅ Modal State */
   const [openModal, setOpenModal] = useState(false);
@@ -67,7 +72,26 @@ export default function UserList() {
       .finally(() => setLoading(false));
   }, []);
 
-//   console.log("Enabled Clients:", enabledClients);
+  /* ================= Reset password ================= */
+
+  const handleResetPassword = async (record: UserRow) => {
+    try {
+      setResetLoadingId(record.id);
+
+      await resetUserPasswordApi({
+        id: record.id,
+        email: record.email,
+      });
+
+      message.success("Password reset successfully ✅");
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to reset password");
+    } finally {
+      setResetLoadingId(null);
+    }
+  };
+
   /* ================= Columns ================= */
 
   const columns: ColumnsType<UserRow> = [
@@ -116,7 +140,7 @@ export default function UserList() {
       width: 130,
       render: (role) => (
         <Tag color="blue" className="text-[11px]">
-          {role}
+          {role?.toUpperCase()}
         </Tag>
       ),
     },
@@ -124,11 +148,13 @@ export default function UserList() {
       title: "Reset",
       align: "center",
       width: 90,
-      render: () => (
+      render: (_, record) => (
         <Button
           type="text"
           size="small"
+          loading={resetLoadingId === record.id}
           icon={<FaLock style={{ color: "#2563eb" }} />}
+          onClick={() => handleResetPassword(record)}
         />
       ),
     },
@@ -148,11 +174,34 @@ export default function UserList() {
 
   /* ================= Submit ================= */
 
-  const handleSubmit = (values: any) => {
-    console.log("New User :", values);
+  const handleSubmit = async (values: any) => {
+    try {
+      setSaving(true);
 
-    setOpenModal(false);
-    form.resetFields();
+      const payload = {
+        id: 0,
+        username: values.username,
+        full_name: values.full_name || "",
+        email: values.email || "",
+        enabled: values.enabled ?? true,
+        user_role: values.user_role,
+        user_clients: values.client ? [values.client] : [],
+        user_client_strategy: {},
+        hashed_password: values.password,
+      };
+
+      await addUpdateUser(payload);
+
+      const response = await getUserList();
+      setUsers(response.data?.result || []);
+
+      setOpenModal(false);
+      form.resetFields();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* ================= UI ================= */
@@ -327,6 +376,7 @@ export default function UserList() {
               type="primary"
               size="small"
               htmlType="submit"
+              loading={saving}
               className="h-8 px-5 text-xs font-medium"
             >
               Create

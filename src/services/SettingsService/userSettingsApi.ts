@@ -15,3 +15,37 @@ export const getUserList = () => {
 export const getEnabledClientList = () => {
   return API.get("/fetch_enabled_clients");
 };
+
+// ================================
+// Add / Update User
+// ================================
+export const addUpdateUser = (payload: {
+  id: number;
+  username: string;
+  full_name: string;
+  email: string;
+  enabled: boolean;
+  user_role: string;
+  user_clients: number[];
+  user_client_strategy: Record<string, unknown>;
+  hashed_password: string;
+}) => {
+  return API.post("/add_update_user_list", payload);
+};
+
+// ================================
+// Reset User Password
+// ================================
+interface ResetUserPassword {
+  id: number;
+  email: string;
+}
+
+export const resetUserPasswordApi = (data: ResetUserPassword) => {
+  const params = new URLSearchParams();
+
+  params.append("id", String(data.id));
+  params.append("email", data.email);
+
+  return API.post(`/reset_user_password?${params.toString()}`);
+};
