@@ -423,7 +423,7 @@ const Navbar: React.FC = () => {
             <button
               onClick={() => {
                 if (isDesktop) {
-                  navigate("javascript:void(0)");
+                  navigate("/userInfo");
                 } else {
                   setUserMenuOpen((prev) => !prev);
                 }
@@ -447,7 +447,7 @@ const Navbar: React.FC = () => {
               <div className="absolute right-0 top-8 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2 lg:hidden max-h-[70vh] overflow-y-auto">
                 {/* USER INFO LINK */}
                 <NavLink
-                  to="javascript:void(0)"
+                  to="/userInfo"
                   onClick={() => setUserMenuOpen(false)}
                   className={({ isActive }) =>
                     `block px-3 py-2 text-xs rounded-md font-medium mb-1 transition ${

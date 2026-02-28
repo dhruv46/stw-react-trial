@@ -24,6 +24,7 @@ import AuthGuard from "./pages/AuthGuard";
 import SimOrderBook from "./pages/SimOrderBook";
 import Home from "./pages/Home";
 import UserList from "./pages/Settings/UserList";
+import UserInfo from "./pages/UserInfo";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -73,6 +74,7 @@ const router = createBrowserRouter([
       { path: "markets", element: <Markets /> },
       { path: "profile", element: <Profile /> },
       { path: "user-list", element: <UserList /> },
+      { path: "userinfo", element: <UserInfo /> },
     ],
   },
 ]);
