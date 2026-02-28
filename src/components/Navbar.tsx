@@ -57,7 +57,7 @@ const nav: NavItem[] = [
     children: [
       { to: "/user-list", label: "User List" },
       { to: "javascript:void(0)", label: "Brokerage" },
-      { to: "javascript:void(0)", label: "Holiday" },
+      { to: "/holiday", label: "Holiday" },
       { to: "javascript:void(0)", label: "Exceptional" },
       {
         label: "Broker Settings",

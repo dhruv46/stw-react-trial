@@ -6,19 +6,15 @@ import {
   Outlet,
 } from "react-router-dom";
 
-import Dashboard from "./pages/Home";
-import Orders from "./pages/Orders";
 import Holdings from "./pages/Holdings";
 import Positions from "./pages/Positions";
 import Funds from "./pages/Funds";
 import Watchlists from "./pages/Watchlists";
 import Markets from "./pages/Markets";
-import Profile from "./pages/Profile";
-import OrderPad from "./pages/OrderPad";
 import Login from "./pages/Login";
 import Forgot from "./pages/Forgot";
 import Topbar from "./components/Navbar";
-import MarketBar from "./components/MarketBar";
+
 import LeftRail from "./components/LeftRail";
 import AuthGuard from "./pages/AuthGuard";
 import SimOrderBook from "./pages/SimOrderBook";
@@ -27,6 +23,7 @@ import UserList from "./pages/Settings/UserList";
 import UserInfo from "./pages/UserInfo";
 import StrategyReport from "./pages/StrategyReport";
 import DownloadReport from "./pages/DownloadReport";
+import Holiday from "./pages/Settings/Holiday";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -79,6 +76,7 @@ const router = createBrowserRouter([
       { path: "markets", element: <Markets /> },
       { path: "user-list", element: <UserList /> },
       { path: "userinfo", element: <UserInfo /> },
+      { path: "holiday", element: <Holiday /> },
     ],
   },
 ]);
