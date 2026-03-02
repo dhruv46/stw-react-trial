@@ -9,6 +9,7 @@ export interface WatchlistItem {
   changeValue?: number; // ✅ ADD THIS
 
   instrumentKey?: string;
+  series?: string; // ✅ ADD THIS
 }
 
 export default function WatchlistPanel() {
@@ -38,6 +39,7 @@ export default function WatchlistPanel() {
           changeValue: Number(item.ChangeValue ?? 0), // ✅ ADD
 
           instrumentKey: item.iifl || item.instrument_id,
+          series: item.series || item.Series, // ✅ IMPORTANT
         }));
 
         setWatchlist(mappedData);

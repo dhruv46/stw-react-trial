@@ -4,14 +4,19 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  SlidersHorizontal,
+  Plus,
+  X,
+  PanelLeftOpen,
+  EllipsisVertical,
+  ChartCandlestick,
+  Trash2,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   getWatchlistApi,
   searchInstrumentsApi,
   addWatchlistApi,
 } from "../services/watchlistApi";
-import { Plus, X, PanelLeftOpen } from "lucide-react";
 import { WatchlistItem } from "../components/WatchlistPanel";
 import socketService from "../services/socketService";
 
@@ -32,7 +37,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
   const [searchText, setSearchText] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [searchPage, setSearchPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
@@ -74,6 +79,8 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
           changeValue: Number(item.ChangeValue ?? 0), // ✅ ADD THIS
 
           instrumentKey: item.iifl || item.instrument_id,
+          // ✅ ADD THIS
+          series: item.Series || item.series,
         }));
         setWatchlist(mappedData);
       } catch (err) {
@@ -162,6 +169,13 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
       setSearchLoading(false);
     }
   };
+
+  useEffect(() => {
+    const close = () => setOpenMenu(null);
+
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, []);
 
   return (
     <aside
@@ -308,6 +322,8 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
 
                                   instrumentKey:
                                     item.iifl || item.instrument_id,
+                                  // ✅ ADD THIS
+                                  series: item.Series || item.series,
                                 }),
                               );
 
@@ -383,9 +399,13 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
               </div>
             ) : (
               watchlist.map((s, index) => (
+                // <div
+                //   key={s.symbol + index}
+                //   className="px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+                // >
                 <div
                   key={s.symbol + index}
-                  className="px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+                  className="group px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <div
@@ -399,47 +419,154 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                     </div>
                   </div>
 
-                  <div
-                    className="flex items-center justify-end gap-2 
-                text-[11px] tabular-nums 
-                w-[200px] shrink-0"
-                  >
-                    {/* LTP */}
+                  <div className="w-[200px] shrink-0 flex justify-end">
+                    {/* ================= NORMAL DATA ================= */}
                     <div
-                      className={`w-[85px] text-right font-medium ${
-                        s.change >= 0 ? "text-emerald-500" : "text-rose-500"
-                      }`}
+                      className="
+      flex items-center justify-end gap-2
+      text-[11px] tabular-nums
+      group-hover:hidden
+    "
                     >
-                      {s.last.toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {/* LTP */}
+                      <div
+                        className={`w-[85px] text-right font-medium ${
+                          s.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                        }`}
+                      >
+                        {s.last.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+
+                      {/* Change */}
+                      <div
+                        className={`w-[65px] text-right ${
+                          s.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                        }`}
+                      >
+                        {s.changeValue?.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+
+                      {/* Percentage */}
+                      <div
+                        className={`flex items-center justify-end w-[70px] ${
+                          s.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                        }`}
+                      >
+                        <span>({s.change.toFixed(2)}%)</span>
+
+                        {s.change >= 0 ? (
+                          <ChevronUp size={14} />
+                        ) : (
+                          <ChevronDown size={14} />
+                        )}
+                      </div>
                     </div>
 
-                    {/* Change Value */}
-                    <div
-                      className={`w-[65px] text-right ${
-                        s.change >= 0 ? "text-emerald-500" : "text-rose-500"
-                      }`}
-                    >
-                      {s.changeValue?.toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </div>
+                    {/* ================= HOVER ICONS ================= */}
+                    {/* ================= HOVER ICONS ================= */}
+                    <div className="hidden group-hover:flex items-center gap-2 relative">
+                      {/* ✅ NON SPOT / INDEX → BUY SELL */}
+                      {s.series !== "SPOT" && s.series !== "INDEX" && (
+                        <>
+                          {/* BUY */}
+                          <button
+                            className="
+        px-2 py-[2px]
+        text-[11px]
+        font-semibold
+        rounded
+        bg-blue-500
+        text-white
+        hover:bg-blue-600
+      "
+                          >
+                            B
+                          </button>
 
-                    {/* Percentage + Icon */}
-                    <div
-                      className={`flex items-center justify-end w-[70px] ${
-                        s.change >= 0 ? "text-emerald-500" : "text-rose-500"
-                      }`}
-                    >
-                      <span>({s.change.toFixed(2)}%)</span>
+                          {/* SELL */}
+                          <button
+                            className="
+        px-2 py-[2px]
+        text-[11px]
+        font-semibold
+        rounded
+        bg-orange-500
+        text-white
+        hover:bg-orange-600
+      "
+                          >
+                            S
+                          </button>
+                        </>
+                      )}
 
-                      {s.change >= 0 ? (
-                        <ChevronUp size={14} />
-                      ) : (
-                        <ChevronDown size={14} />
+                      {/* CHART ICON (COMMON) */}
+                      <button className="p-1 rounded hover:bg-neutral-200">
+                        <ChartCandlestick size={15} className="text-blue-500" />
+                      </button>
+
+                      {/* MENU BUTTON */}
+                      <button
+                        className="p-1 rounded hover:bg-neutral-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+
+                          if (!s.instrumentKey) return;
+
+                          setOpenMenu(
+                            openMenu === s.instrumentKey
+                              ? null
+                              : s.instrumentKey,
+                          );
+                        }}
+                      >
+                        <EllipsisVertical size={15} />
+                      </button>
+
+                      {/* ================= DROPDOWN ================= */}
+                      {openMenu === s.instrumentKey && (
+                        <div
+                          className="
+      absolute right-0 top-7
+      bg-white border rounded-md shadow-lg
+      w-[170px]
+      z-50
+    "
+                        >
+                          {/* OPTION CHAIN ONLY FOR SPOT / INDEX */}
+                          {(s.series === "SPOT" || s.series === "INDEX") && (
+                            <button
+                              className="
+          flex items-center gap-3
+          w-full px-4 py-2
+          hover:bg-neutral-100
+          text-sm
+        "
+                            >
+                              <ArrowLeftRight size={16} />
+                              Option Chain
+                            </button>
+                          )}
+
+                          {/* REMOVE */}
+                          <button
+                            className="
+        flex items-center gap-3
+        w-full px-4 py-2
+        hover:bg-neutral-100
+        text-sm
+      "
+                          >
+                            <Trash2 size={16} />
+                            Remove
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
