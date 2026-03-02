@@ -29,6 +29,7 @@ import {
 } from "../services/tradebookApi";
 import { getEnabledClientList } from "../services/SettingsService/userSettingsApi";
 import dayjs from "dayjs";
+import { useLocation } from "react-router-dom";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -139,9 +140,10 @@ export default function TradeBook() {
     broker: "All",
     status: "All",
   });
+  //   const location = useLocation();
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
-  const [mode, setMode] = useState("live");
+  //   const [mode, setMode] = useState<"live" | "sim">("live"); // Typed state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadClient, setUploadClient] = useState(null);
   const [uploadBroker, setUploadBroker] = useState(null);
@@ -149,6 +151,12 @@ export default function TradeBook() {
   const [fileList, setFileList] = useState<any[]>([]);
   const [csvData, setCsvData] = useState<string[][]>([]); // CSV parsed data
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const location = useLocation();
+
+  const endpoint = location.pathname.split("/")[1];
+
+  const mode = endpoint === "sim-trade-book" ? "sim" : "live";
 
   // ================================
   // Fetch Clients for Modal Dropdown
@@ -181,7 +189,7 @@ export default function TradeBook() {
         filters.startDate,
         filters.endDate,
         false,
-        "live",
+        mode,
       );
 
       // ✅ adjust according backend response
@@ -241,7 +249,7 @@ export default function TradeBook() {
 
   useEffect(() => {
     loadTradeBook();
-  }, [filters]);
+  }, [filters, mode]);
 
   // ================================
   // Filter Handlers
@@ -1023,7 +1031,7 @@ export default function TradeBook() {
   
   /* 1. ROOT TABLE & CONTAINER - Force Collapse to Remove Gaps */
   .tradebook-table-compact .ant-table {
-  
+    font-family: 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     background: #ffffff;
     margin: 0 !important;
