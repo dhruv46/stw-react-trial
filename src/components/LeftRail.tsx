@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ChevronDown,
   ChevronUp,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
-import { getWatchlistApi } from "../services/watchlistApi";
+import {
+  getWatchlistApi,
+  searchInstrumentsApi,
+} from "../services/watchlistApi";
+
 import { WatchlistItem } from "../components/WatchlistPanel";
 import socketService from "../services/socketService";
 
@@ -17,11 +22,20 @@ interface LeftRailProps {
 }
 
 export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [active, setActive] = useState("1");
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const subscribedRef = useRef<string[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const [searchPage, setSearchPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+
+  const debounceRef = useRef<any>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -45,16 +59,6 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
           setWatchlist([]);
           return;
         }
-
-        // const mappedData: WatchlistItem[] = data.map((item: any) => ({
-        //   symbol: item.DisplayName || item.instrument_id || "UNKNOWN",
-
-        //   name:
-        //     item.DetailedDescription !== "-" ? item.DetailedDescription : "",
-
-        //   last: Number(item.ltp ?? 0),
-        //   change: Number(item.PercentChange ?? 0),
-        // }));
 
         const mappedData: WatchlistItem[] = data.map((item: any) => ({
           symbol: item.DisplayName || item.instrument_id || "UNKNOWN",
@@ -133,6 +137,31 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
       subscribedRef.current = [];
     };
   }, [watchlist.length]);
+
+  const fetchSearch = async (query: string, page = 1) => {
+    try {
+      setSearchLoading(true);
+
+      const res = await searchInstrumentsApi(query, page);
+
+      const result = res?.data?.result;
+
+      const list = result?.data ?? [];
+
+      setLastPage(result?.last_page ?? 1);
+
+      if (page === 1) {
+        setSearchResults(list);
+      } else {
+        setSearchResults((prev) => [...prev, ...list]);
+      }
+    } catch (err) {
+      console.error("Search failed", err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   return (
     <aside
       className={`
@@ -162,15 +191,92 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
           {/* Top Search Bar */}
           <div className="flex flex-col border-b border-neutral-100">
             {/* Search Section */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
-              {/* Search Section */}
-              <div className="flex items-center gap-2 flex-1 text-neutral-500">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 relative">
+              {/* SEARCH WRAPPER */}
+              <div className="flex items-center gap-2 flex-1 text-neutral-500 relative">
                 <Search size={16} />
 
                 <input
+                  value={searchText}
+                  onChange={(e) => {
+                    const value = e.target.value;
+
+                    setSearchText(value);
+                    setSearchPage(1);
+
+                    setSearchParams({
+                      q: value,
+                      page: "1",
+                    });
+
+                    if (debounceRef.current) {
+                      clearTimeout(debounceRef.current);
+                    }
+
+                    debounceRef.current = setTimeout(() => {
+                      if (value.trim()) {
+                        fetchSearch(value, 1);
+                      } else {
+                        setSearchResults([]);
+                      }
+                    }, 350);
+                  }}
                   placeholder="Search eg: infy bse, nifty fut..."
                   className="w-full bg-slate-100 outline-none text-sm placeholder:text-neutral-400 text-neutral-800 rounded px-2 py-1"
                 />
+
+                {/* ✅ DROPDOWN */}
+                {searchText && searchResults.length > 0 && (
+                  <div
+                    className="
+        absolute top-full left-0 right-0 mt-2
+        bg-white border border-neutral-200
+        rounded-md shadow-xl
+        max-h-[350px]
+        overflow-y-auto
+        z-[999]
+      "
+                  >
+                    {searchResults.map((item, i) => (
+                      <div
+                        key={item.instrument_id + i}
+                        className="px-4 py-1 hover:bg-neutral-100 cursor-pointer"
+                      >
+                        <div className="text-xs font-medium text-neutral-800">
+                          {item.DisplayName}
+                        </div>
+                      </div>
+                    ))}
+
+                    {searchLoading && (
+                      <div className="p-2 text-center text-xs">
+                        Searching...
+                      </div>
+                    )}
+
+                    {searchPage < lastPage && (
+                      <div className="p-2 text-center">
+                        <button
+                          className="text-xs text-orange-600"
+                          onClick={() => {
+                            const next = searchPage + 1;
+
+                            setSearchPage(next);
+
+                            fetchSearch(searchText, next);
+
+                            setSearchParams({
+                              q: searchText,
+                              page: String(next),
+                            });
+                          }}
+                        >
+                          Load More
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Toggle Button */}
