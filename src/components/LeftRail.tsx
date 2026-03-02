@@ -20,6 +20,7 @@ import {
 } from "../services/watchlistApi";
 import { WatchlistItem } from "../components/WatchlistPanel";
 import socketService from "../services/socketService";
+import { useSocket } from "../hook/useSocket";
 
 const tabs = ["1", "2", "3", "4", "5"];
 
@@ -96,56 +97,85 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
     fetchWatchlist();
   }, [active]);
 
+  // useEffect(() => {
+  //   if (!watchlist.length) return;
+
+  //   // socketService.connect();
+
+  //   const instruments = watchlist
+  //     .map((w: any) => w.instrumentKey)
+  //     .filter(Boolean);
+
+  //   // ✅ prevent resubscribe loop
+  //   const newInstruments = instruments.filter(
+  //     (inst) => !subscribedRef.current.includes(inst),
+  //   );
+
+  //   if (!newInstruments.length) return;
+
+  //   newInstruments.forEach((inst: string) => {
+  //     socketService.subscribe(`tick_message_${inst}`, (frame: any) => {
+  //       try {
+  //         const outer = JSON.parse(frame.body);
+  //         const inner = JSON.parse(outer.data);
+
+  //         setWatchlist((prev) =>
+  //           prev.map((item: any) =>
+  //             item.instrumentKey === inst
+  //               ? {
+  //                   ...item,
+  //                   last: inner.Price ?? item.last,
+  //                   change: inner.PercentChange ?? item.change,
+  //                   changeValue: inner.ChangeValue ?? item.changeValue,
+  //                 }
+  //               : item,
+  //           ),
+  //         );
+  //       } catch (err) {
+  //         console.error("Socket parse error", err);
+  //       }
+  //     });
+  //   });
+
+  //   subscribedRef.current = [...subscribedRef.current, ...newInstruments];
+
+  //   return () => {
+  //     newInstruments.forEach((inst: string) => {
+  //       socketService.unsubscribe(`tick_message_${inst}`);
+  //     });
+
+  //     subscribedRef.current = [];
+  //   };
+  // }, [watchlist.length]);
+
   useEffect(() => {
-    if (!watchlist.length) return;
+    watchlist.forEach((item) => {
+      if (!item.instrumentKey) return;
 
-    socketService.connect();
+      const topic = `tick_message_${item.instrumentKey}`;
 
-    const instruments = watchlist
-      .map((w: any) => w.instrumentKey)
-      .filter(Boolean);
+      const handler = (inner: any) => {
+        setWatchlist((prev) =>
+          prev.map((w) =>
+            w.instrumentKey === item.instrumentKey
+              ? {
+                  ...w,
+                  last: inner.Price ?? w.last,
+                  change: inner.PercentChange ?? w.change,
+                  changeValue: inner.ChangeValue ?? w.changeValue,
+                }
+              : w,
+          ),
+        );
+      };
 
-    // ✅ prevent resubscribe loop
-    const newInstruments = instruments.filter(
-      (inst) => !subscribedRef.current.includes(inst),
-    );
+      socketService.subscribe(topic, handler);
 
-    if (!newInstruments.length) return;
-
-    newInstruments.forEach((inst: string) => {
-      socketService.subscribe(`tick_message_${inst}`, (frame: any) => {
-        try {
-          const outer = JSON.parse(frame.body);
-          const inner = JSON.parse(outer.data);
-
-          setWatchlist((prev) =>
-            prev.map((item: any) =>
-              item.instrumentKey === inst
-                ? {
-                    ...item,
-                    last: inner.Price ?? item.last,
-                    change: inner.PercentChange ?? item.change,
-                    changeValue: inner.ChangeValue ?? item.changeValue,
-                  }
-                : item,
-            ),
-          );
-        } catch (err) {
-          console.error("Socket parse error", err);
-        }
-      });
+      return () => {
+        socketService.unsubscribe(topic, handler);
+      };
     });
-
-    subscribedRef.current = [...subscribedRef.current, ...newInstruments];
-
-    return () => {
-      newInstruments.forEach((inst: string) => {
-        socketService.unsubscribe(`tick_message_${inst}`);
-      });
-
-      subscribedRef.current = [];
-    };
-  }, [watchlist.length]);
+  }, [watchlist]);
 
   const fetchSearch = async (query: string, page = 1) => {
     try {

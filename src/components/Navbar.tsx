@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { LogOut, User, ChevronDown, ChevronRight } from "lucide-react";
 import socketService from "../services/socketService";
 import { logoutApi, InstrumentLTP } from "../services/authApi";
-
+import { useSocket } from "../hook/useSocket";
 /* =======================
    Types
 ======================= */
@@ -30,9 +30,9 @@ const nav: NavItem[] = [
   {
     label: "Trades",
     children: [
-      { to: "javascript:void(0)", label: "Trade Book" },
-      { to: "javascript:void(0)", label: "Edit Mode" },
-      { to: "javascript:void(0)", label: "Sim Trade Book" },
+      { to: "/trades", label: "Trade Book" },
+      { to: "/trade-edit-mode", label: "Edit Mode" },
+      { to: "/sim-trade-book", label: "Sim Trade Book" },
     ],
   },
   { to: "javascript:void(0)", label: "Manual Execution" },
@@ -129,37 +129,63 @@ const Navbar: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    socketService.connect();
+  // useEffect(() => {
+  //   socketService.connect();
 
-    const instruments = ["1_26000", "11_26065"];
+  //   const instruments = ["1_26000", "11_26065"];
 
-    instruments.forEach((inst) => {
-      socketService.subscribe(`tick_message_${inst}`, (frame: any) => {
-        try {
-          const outer = JSON.parse(frame.body);
-          const inner = JSON.parse(outer.data);
+  //   instruments.forEach((inst) => {
+  //     socketService.subscribe(`tick_message_${inst}`, (frame: any) => {
+  //       try {
+  //         const outer = JSON.parse(frame.body);
+  //         const inner = JSON.parse(outer.data);
 
-          setMarketData((prev) => ({
-            ...prev,
-            [inst]: {
-              Price: inner.Price,
-              ChangeValue: inner.ChangeValue,
-              PercentChange: inner.PercentChange,
-            },
-          }));
-        } catch (err) {
-          console.error("Failed to parse frame:", err);
-        }
-      });
-    });
+  //         // console.log("inner", inner);
 
-    return () => {
-      instruments.forEach((inst) => {
-        socketService.unsubscribe(`tick_message_${inst}`);
-      });
-    };
-  }, []);
+  //         setMarketData((prev) => ({
+  //           ...prev,
+  //           [inst]: {
+  //             Price: inner.Price,
+  //             ChangeValue: inner.ChangeValue,
+  //             PercentChange: inner.PercentChange,
+  //           },
+  //         }));
+  //       } catch (err) {
+  //         console.error("Failed to parse frame:", err);
+  //       }
+  //     });
+  //   });
+
+  //   return () => {
+  //     instruments.forEach((inst) => {
+  //       socketService.unsubscribe(`tick_message_${inst}`);
+  //     });
+  //   };
+  // }, []);
+
+  // instrument 1
+  useSocket("tick_message_1_26000", (inner) => {
+    setMarketData((prev) => ({
+      ...prev,
+      ["1_26000"]: {
+        Price: inner.Price,
+        ChangeValue: inner.ChangeValue,
+        PercentChange: inner.PercentChange,
+      },
+    }));
+  });
+
+  // instrument 2
+  useSocket("tick_message_11_26065", (inner) => {
+    setMarketData((prev) => ({
+      ...prev,
+      ["11_26065"]: {
+        Price: inner.Price,
+        ChangeValue: inner.ChangeValue,
+        PercentChange: inner.PercentChange,
+      },
+    }));
+  });
 
   useEffect(() => {
     const fetchLTP = async () => {

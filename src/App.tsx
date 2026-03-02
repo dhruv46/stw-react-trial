@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   useLocation,
   createBrowserRouter,
@@ -24,6 +24,8 @@ import UserInfo from "./pages/UserInfo";
 import StrategyReport from "./pages/StrategyReport";
 import DownloadReport from "./pages/DownloadReport";
 import Holiday from "./pages/Settings/Holiday";
+import TradeBook from "./pages/TradeBook";
+import socketService from "./services/socketService";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -31,6 +33,9 @@ function Layout() {
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };
+  useEffect(() => {
+    socketService.connect();
+  }, []);
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
@@ -70,6 +75,7 @@ const router = createBrowserRouter([
       { path: "position", element: <PositionWrapper /> },
       { path: "report", element: <StrategyReport /> },
       { path: "download-report", element: <DownloadReport /> },
+      { path: "trades", element: <TradeBook /> },
 
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
