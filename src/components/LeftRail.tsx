@@ -94,7 +94,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
     };
 
     fetchWatchlist();
-  }, []);
+  }, [active]);
 
   useEffect(() => {
     if (!watchlist.length) return;
