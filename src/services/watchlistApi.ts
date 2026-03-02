@@ -22,3 +22,10 @@ export const searchInstrumentsApi = (query: string, page: number = 1) => {
 export const addWatchlistApi = (instrument: string, pageNo: number = 1) => {
   return API.get(`/add_watch_list?instrument=${instrument}&page_no=${pageNo}`);
 };
+
+// ==============================
+// ✅ Delete Instrument From Watchlist
+// ==============================
+export const deleteWatchlistApi = (instrument: string) => {
+  return API.get(`/delete_watch_list?instrument=${instrument}`);
+};

@@ -16,6 +16,7 @@ import {
   getWatchlistApi,
   searchInstrumentsApi,
   addWatchlistApi,
+  deleteWatchlistApi,
 } from "../services/watchlistApi";
 import { WatchlistItem } from "../components/WatchlistPanel";
 import socketService from "../services/socketService";
@@ -562,6 +563,53 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
         hover:bg-neutral-100
         text-sm
       "
+                            onClick={async (e) => {
+                              e.stopPropagation();
+
+                              try {
+                                if (!s.instrumentKey) return;
+
+                                await deleteWatchlistApi(s.instrumentKey);
+
+                                // refresh watchlist
+                                // ✅ refresh watchlist properly
+                                const res = await getWatchlistApi(
+                                  Number(active),
+                                );
+
+                                const data = res?.data?.result ?? [];
+
+                                const mappedData: WatchlistItem[] = data.map(
+                                  (item: any) => ({
+                                    symbol:
+                                      item.DisplayName ||
+                                      item.instrument_id ||
+                                      "UNKNOWN",
+
+                                    name:
+                                      item.DetailedDescription !== "-"
+                                        ? item.DetailedDescription
+                                        : "",
+
+                                    last: Number(item.ltp ?? 0),
+
+                                    change: Number(item.PercentChange ?? 0),
+
+                                    changeValue: Number(item.ChangeValue ?? 0),
+
+                                    instrumentKey:
+                                      item.iifl || item.instrument_id,
+                                    // ✅ ADD THIS
+                                    series: item.Series || item.series,
+                                  }),
+                                );
+
+                                setWatchlist(mappedData);
+                                setError(null);
+                              } catch (err) {
+                                console.error("Delete failed", err);
+                              }
+                            }}
                           >
                             <Trash2 size={16} />
                             Remove
