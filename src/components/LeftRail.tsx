@@ -94,7 +94,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
     };
 
     fetchWatchlist();
-  }, [active, isOpen]);
+  }, []);
 
   useEffect(() => {
     if (!watchlist.length) return;
@@ -442,34 +442,29 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                       </div>
 
                       {/* Change */}
-                      <div
-                        className={`w-[65px] text-right ${
-                          s.change >= 0 ? "text-emerald-500" : "text-rose-500"
-                        }`}
-                      >
-                        {s.changeValue?.toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
+                      <div className="flex items-center ">
+                        <div className={`w-[65px] text-right text-gray-500`}>
+                          {s.changeValue?.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
 
-                      {/* Percentage */}
-                      <div
-                        className={`flex items-center justify-end w-[70px] ${
-                          s.change >= 0 ? "text-emerald-500" : "text-rose-500"
-                        }`}
-                      >
-                        <span>({s.change.toFixed(2)}%)</span>
+                        {/* Percentage */}
+                        <div
+                          className={`flex items-center justify-end w-[60px] text-gray-500`}
+                        >
+                          <span>({s.change.toFixed(2)}%)</span>
 
-                        {s.change >= 0 ? (
-                          <ChevronUp size={14} />
-                        ) : (
-                          <ChevronDown size={14} />
-                        )}
+                          {s.change >= 0 ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* ================= HOVER ICONS ================= */}
                     {/* ================= HOVER ICONS ================= */}
                     <div className="hidden group-hover:flex items-center gap-2 relative">
                       {/* ✅ NON SPOT / INDEX → BUY SELL */}
