@@ -15,3 +15,10 @@ export const searchInstrumentsApi = (query: string, page: number = 1) => {
     `/search_instruments_by_all?q=${encodeURIComponent(query)}&page=${page}`,
   );
 };
+
+// ==============================
+// Add Instrument To Watchlist
+// ==============================
+export const addWatchlistApi = (instrument: string, pageNo: number = 1) => {
+  return API.get(`/add_watch_list?instrument=${instrument}&page_no=${pageNo}`);
+};

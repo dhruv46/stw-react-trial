@@ -9,8 +9,9 @@ import {
 import {
   getWatchlistApi,
   searchInstrumentsApi,
+  addWatchlistApi,
 } from "../services/watchlistApi";
-
+import { Plus, X, PanelLeftOpen } from "lucide-react";
 import { WatchlistItem } from "../components/WatchlistPanel";
 import socketService from "../services/socketService";
 
@@ -180,7 +181,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
             onClick={toggleSidebar}
             className="p-2 hover:bg-neutral-100 rounded-md transition"
           >
-            <SlidersHorizontal size={18} />
+            <PanelLeftOpen size={18} />
           </button>
         </div>
       )}
@@ -196,6 +197,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
               <div className="flex items-center gap-2 flex-1 text-neutral-500 relative">
                 <Search size={16} />
 
+                {/* INPUT */}
                 <input
                   value={searchText}
                   onChange={(e) => {
@@ -222,29 +224,102 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                     }, 350);
                   }}
                   placeholder="Search eg: infy bse, nifty fut..."
-                  className="w-full bg-slate-100 outline-none text-sm placeholder:text-neutral-400 text-neutral-800 rounded px-2 py-1"
+                  className="w-full bg-slate-100 outline-none text-sm placeholder:text-neutral-400 text-neutral-800 rounded px-2 py-1 pr-7"
                 />
+
+                {/* ✅ CLEAR (X) BUTTON */}
+                {searchText && (
+                  <button
+                    className="absolute right-2 p-0.5 hover:bg-neutral-200 rounded"
+                    onClick={() => {
+                      // clear input
+                      setSearchText("");
+
+                      // reset dropdown
+                      setSearchResults([]);
+
+                      // reset pagination
+                      setSearchPage(1);
+
+                      // remove query params
+                      setSearchParams({});
+
+                      // optional API reset call
+                      fetchSearch("", 1);
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
 
                 {/* ✅ DROPDOWN */}
                 {searchText && searchResults.length > 0 && (
                   <div
                     className="
-        absolute top-full left-0 right-0 mt-2
-        bg-white border border-neutral-200
-        rounded-md shadow-xl
-        max-h-[350px]
-        overflow-y-auto
-        z-[999]
-      "
+      absolute top-full left-0 right-0 mt-2
+      bg-white border border-neutral-200
+      rounded-md shadow-xl
+      max-h-[350px]
+      overflow-y-auto
+      z-[999]
+    "
                   >
                     {searchResults.map((item, i) => (
                       <div
                         key={item.instrument_id + i}
-                        className="px-4 py-1 hover:bg-neutral-100 cursor-pointer"
+                        className="px-4 py-1 hover:bg-neutral-100 cursor-pointer flex items-center justify-between"
                       >
                         <div className="text-xs font-medium text-neutral-800">
                           {item.DisplayName}
                         </div>
+
+                        {/* PLUS BUTTON */}
+                        <button
+                          className="ml-3 flex items-center justify-center w-5 h-5 rounded hover:bg-neutral-200 transition"
+                          onClick={async () => {
+                            try {
+                              await addWatchlistApi(
+                                item.instrument_id,
+                                Number(active),
+                              );
+
+                              // ✅ refresh watchlist properly
+                              const res = await getWatchlistApi(Number(active));
+
+                              const data = res?.data?.result ?? [];
+
+                              const mappedData: WatchlistItem[] = data.map(
+                                (item: any) => ({
+                                  symbol:
+                                    item.DisplayName ||
+                                    item.instrument_id ||
+                                    "UNKNOWN",
+
+                                  name:
+                                    item.DetailedDescription !== "-"
+                                      ? item.DetailedDescription
+                                      : "",
+
+                                  last: Number(item.ltp ?? 0),
+
+                                  change: Number(item.PercentChange ?? 0),
+
+                                  changeValue: Number(item.ChangeValue ?? 0),
+
+                                  instrumentKey:
+                                    item.iifl || item.instrument_id,
+                                }),
+                              );
+
+                              // ✅ IMPORTANT
+                              setWatchlist(mappedData);
+                            } catch (err) {
+                              console.error("Add watchlist failed", err);
+                            }
+                          }}
+                        >
+                          <Plus size={16} />
+                        </button>
                       </div>
                     ))}
 
@@ -262,7 +337,6 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                             const next = searchPage + 1;
 
                             setSearchPage(next);
-
                             fetchSearch(searchText, next);
 
                             setSearchParams({
@@ -284,7 +358,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                 onClick={toggleSidebar}
                 className="ml-3 p-2 rounded hover:bg-neutral-100 transition"
               >
-                <SlidersHorizontal size={16} />
+                <PanelLeftOpen size={16} />
               </button>
             </div>
 
@@ -311,7 +385,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
               watchlist.map((s, index) => (
                 <div
                   key={s.symbol + index}
-                  className="px-4 py-[14px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+                  className="px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <div
