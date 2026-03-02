@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react'
-import { getWatchlistApi } from '../services/watchlistApi'
+import React, { useEffect, useState } from "react";
+import { getWatchlistApi } from "../services/watchlistApi";
 
 export interface WatchlistItem {
   symbol: string;
   name?: string;
   last: number;
   change: number;
+  changeValue?: number; // ✅ ADD THIS
+
+  instrumentKey?: string;
 }
 
 export default function WatchlistPanel() {
@@ -22,11 +25,19 @@ export default function WatchlistPanel() {
         // Use exact API response structure: { result: [...] }
         const data = res.data?.result || [];
 
-        const mappedData = data.map((item: any) => ({
-          symbol: item.DisplayName || item.instrument_id || 'UNKNOWN',
-          name: item.DetailedDescription !== "-" ? item.DetailedDescription : '',
+        const mappedData: WatchlistItem[] = data.map((item: any) => ({
+          symbol: item.DisplayName || item.instrument_id || "UNKNOWN",
+
+          name:
+            item.DetailedDescription !== "-" ? item.DetailedDescription : "",
+
           last: Number(item.ltp ?? 0),
+
           change: Number(item.PercentChange ?? 0),
+
+          changeValue: Number(item.ChangeValue ?? 0), // ✅ ADD
+
+          instrumentKey: item.iifl || item.instrument_id,
         }));
 
         setWatchlist(mappedData);
@@ -74,25 +85,47 @@ export default function WatchlistPanel() {
       </div>
       <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
         {watchlist.length === 0 && (
-          <div className="py-4 text-center text-sm text-neutral-500">No items available.</div>
+          <div className="py-4 text-center text-sm text-neutral-500">
+            No items available.
+          </div>
         )}
         {watchlist.map((s, index) => (
           // Using index as fallback key in case symbol is missing or duplicate
-          <div key={s.symbol + index} className="flex items-center justify-between py-2">
+          <div
+            key={s.symbol + index}
+            className="flex items-center justify-between py-2"
+          >
             <div className="flex items-center gap-3">
-              <div className={`w-1.5 h-6 rounded ${s.change >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <div
+                className={`w-1.5 h-6 rounded ${s.change >= 0 ? "bg-emerald-500" : "bg-rose-500"}`}
+              />
               <div>
                 <div className="font-medium">{s.symbol}</div>
                 <div className="text-xs opacity-70">{s.name}</div>
               </div>
             </div>
             <div className="text-right">
-              <div className="font-semibold">{s.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-              <div className={`text-xs ${s.change >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{s.change > 0 ? '+' : ''}{s.change.toFixed(2)}%</div>
+              <div className="font-semibold">
+                {s.last.toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+              <div
+                className={`text-xs ${
+                  s.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                }`}
+              >
+                {(s.changeValue ?? 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                ({s.change.toFixed(2)}%)
+              </div>
             </div>
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }
