@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Table,
   Typography,
@@ -12,11 +18,14 @@ import {
   Modal,
   Upload,
   message,
+  Input,
+  Form,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, ColumnType } from "antd/es/table";
 import {
   fetchTradeBookApi,
   insertTradeBookCsvApi,
+  updateTradeBookFieldApi,
 } from "../services/tradebookApi";
 import { getEnabledClientList } from "../services/SettingsService/userSettingsApi";
 import dayjs from "dayjs";
@@ -25,10 +34,82 @@ const { Text } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 const { Dragger } = Upload;
+
+// ================= Editable Table Components =================
+const EditableContext = createContext<any>(null);
+
+const EditableRow: React.FC<any> = ({ index, ...props }) => {
+  const [form] = Form.useForm();
+  return (
+    <Form form={form} component={false}>
+      <EditableContext.Provider value={form}>
+        <tr {...props} />
+      </EditableContext.Provider>
+    </Form>
+  );
+};
+
+interface EditableCellProps {
+  title: string;
+  editable: boolean;
+  children: React.ReactNode;
+  dataIndex: string;
+  record: any;
+  handleSave: (record: any) => void;
+}
+
+const EditableCell: React.FC<EditableCellProps> = ({
+  editable,
+  children,
+  dataIndex,
+  record,
+  handleSave,
+  title,
+  ...restProps
+}) => {
+  const form = useContext(EditableContext);
+  const [editing, setEditing] = useState(false);
+
+  const toggleEdit = () => {
+    setEditing(!editing);
+    form.setFieldsValue({ [dataIndex]: record[dataIndex] });
+  };
+
+  const save = async () => {
+    try {
+      const values = await form.validateFields();
+      toggleEdit();
+      handleSave({ ...record, ...values });
+    } catch (err) {
+      console.log("Save failed:", err);
+    }
+  };
+
+  let childNode = children;
+
+  if (editable) {
+    childNode = editing ? (
+      <Form.Item
+        name={dataIndex}
+        style={{ margin: 0 }}
+        rules={[{ required: true, message: `${title} is required.` }]}
+      >
+        <Input autoFocus onPressEnter={save} onBlur={save} size="small" />
+      </Form.Item>
+    ) : (
+      <div onDoubleClick={toggleEdit} className="cursor-pointer">
+        {children || "-"}
+      </div>
+    );
+  }
+
+  return <td {...restProps}>{childNode}</td>;
+};
 // ================================
 // Types
 // ================================
 interface TradeBookRow {
+  id: number; // <-- add this
   key: string;
   broker: string;
   instrument: string;
@@ -68,6 +149,7 @@ export default function TradeBook() {
   const [fileList, setFileList] = useState<any[]>([]);
   const [csvData, setCsvData] = useState<string[][]>([]); // CSV parsed data
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
   // ================================
   // Fetch Clients for Modal Dropdown
   // ================================
@@ -107,6 +189,7 @@ export default function TradeBook() {
 
       const formatted: TradeBookRow[] = apiData.map(
         (item: any, index: number) => ({
+          id: item.id ?? 0,
           key: index.toString(),
           broker: item.broker ?? "-",
           instrument: item.instrument ?? "-",
@@ -236,6 +319,23 @@ export default function TradeBook() {
     return [headers, ...csvRows].map((row) => row.join(",")).join("\n");
   };
 
+  // ================= Handle Save =================
+  const handleSave = async (row: TradeBookRow) => {
+    try {
+      await updateTradeBookFieldApi({
+        id: String(row.id), // <-- cast to string
+        field_name: "remarks",
+        field_value: String(row.remarks), // ensure string
+      });
+      setData((prev) =>
+        prev.map((r) => (r.key === row.key ? { ...r, ...row } : r)),
+      );
+      message.success("Remarks updated!");
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to update remarks");
+    }
+  };
   // ================================
   // Columns (unchanged)
   // ================================
@@ -368,6 +468,25 @@ export default function TradeBook() {
     [],
   );
 
+  // ================= Columns =================
+  const mergedColumns: ColumnsType<TradeBookRow> = allColumns.map((col) => {
+    if (!("dataIndex" in col)) return col;
+
+    if (col.dataIndex === "remarks") {
+      return {
+        ...col,
+        onCell: (record: TradeBookRow) => ({
+          record,
+          editable: true,
+          dataIndex: col.dataIndex,
+          title: col.title as string, // cast title if needed
+          handleSave,
+        }),
+      } as ColumnType<TradeBookRow>;
+    }
+
+    return col;
+  });
   // ================================
   // Visible Columns
   // ================================
@@ -657,13 +776,19 @@ export default function TradeBook() {
         {/* Table Wrapper - Ensure p-0 to remove external gaps */}
         <div className="flex-1 overflow-hidden rounded-b-xl border-t border-slate-200 p-0">
           <Table<TradeBookRow>
-            columns={columns}
+            components={{
+              body: {
+                row: EditableRow,
+                cell: EditableCell,
+              },
+            }}
+            columns={mergedColumns}
             dataSource={data}
             loading={loading}
             pagination={false}
             size="small"
             sticky
-            rowKey="key"
+            rowKey="id"
             scroll={{
               x: "max-content",
               y: "calc(100vh - 180px)",
@@ -898,7 +1023,7 @@ export default function TradeBook() {
   
   /* 1. ROOT TABLE & CONTAINER - Force Collapse to Remove Gaps */
   .tradebook-table-compact .ant-table {
-    font-family: 'Inter', -apple-system, sans-serif;
+  
     font-size: 11px;
     background: #ffffff;
     margin: 0 !important;
