@@ -26,6 +26,7 @@ import DownloadReport from "./pages/DownloadReport";
 import Holiday from "./pages/Settings/Holiday";
 import TradeBook from "./pages/TradeBook";
 import socketService from "./services/socketService";
+import AddHoliday from "./pages/Settings/AddHoliday";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -41,7 +42,7 @@ function Layout() {
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
       <Topbar />
       {/* <MarketBar /> */}
-      <div className="flex">
+      <div className="flex h-full">
         <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <main className="flex-1 min-w-0 overflow-hidden bg-slate-100">
           <Outlet />
@@ -85,6 +86,8 @@ const router = createBrowserRouter([
       { path: "user-list", element: <UserList /> },
       { path: "userinfo", element: <UserInfo /> },
       { path: "holiday", element: <Holiday /> },
+      { path: "add-holiday", element: <AddHoliday /> },
+      { path: "edit-holiday/:id", element: <AddHoliday /> },
     ],
   },
 ]);

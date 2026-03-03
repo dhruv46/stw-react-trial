@@ -1,10 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { Table, Card, Spin, Typography, Button, Space, Select } from "antd";
+import {
+  Table,
+  Card,
+  Spin,
+  Typography,
+  Button,
+  Space,
+  Select,
+  Modal,
+  message,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined } from "@ant-design/icons";
-import { fetchHolidayList } from "../../services/SettingsService/holidaySettingsApi";
+import {
+  fetchHolidayList,
+  deleteHolidayById,
+} from "../../services/SettingsService/holidaySettingsApi";
 import dayjs from "dayjs";
-
+import { useNavigate } from "react-router-dom";
 import { FiEdit2 } from "react-icons/fi";
 import { MdDeleteOutline } from "react-icons/md";
 import Loader from "../../components/Loader";
@@ -21,9 +34,15 @@ interface HolidayRow {
 }
 
 const Holiday = () => {
+  const navigate = useNavigate();
   const [holidays, setHolidays] = useState<HolidayRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(dayjs().year());
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedHolidayId, setSelectedHolidayId] = useState<number | null>(
+    null,
+  );
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   /* ================= YEAR OPTIONS ================= */
 
@@ -68,11 +87,44 @@ const Holiday = () => {
   /* ================= ACTIONS ================= */
 
   const handleEdit = (record: HolidayRow) => {
-    console.log("Edit:", record);
+    navigate(`/edit-holiday/${record.id}`);
   };
 
   const handleDelete = (record: HolidayRow) => {
-    console.log("Delete:", record);
+    setSelectedHolidayId(record.id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedHolidayId) return;
+
+    try {
+      setDeleteLoading(true);
+
+      await deleteHolidayById(selectedHolidayId);
+
+      message.success("Holiday deleted successfully");
+
+      // Refresh list after delete
+      const res = await fetchHolidayList(selectedYear);
+      const apiData = res?.data?.result ?? [];
+
+      const mapped = apiData.map((item: any, index: number) => ({
+        key: index,
+        ...item,
+      }));
+
+      setHolidays(mapped);
+
+      setDeleteModalOpen(false);
+      setSelectedHolidayId(null);
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || "Failed to delete holiday",
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   /* ================= COLUMNS ================= */
@@ -174,6 +226,7 @@ const Holiday = () => {
                 type="primary"
                 icon={<PlusOutlined />}
                 className="bg-blue-600 font-semibold"
+                onClick={() => navigate("/add-holiday")}
               >
                 Add New Holiday
               </Button>
@@ -204,6 +257,42 @@ const Holiday = () => {
             </Spin>
           </div>
         </div>
+
+        <Modal
+          open={deleteModalOpen}
+          onCancel={() => {
+            setDeleteModalOpen(false);
+            setSelectedHolidayId(null);
+          }}
+          footer={null}
+          centered
+        >
+          <div className="py-4">
+            <Typography.Text>
+              Are you sure you want to delete this holiday?
+            </Typography.Text>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setSelectedHolidayId(null);
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                danger
+                type="primary"
+                loading={deleteLoading}
+                onClick={confirmDelete}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </Card>
 
       {/* STYLE */}
