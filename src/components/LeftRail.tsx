@@ -7,6 +7,7 @@ import {
   Plus,
   X,
   PanelLeftOpen,
+  PanelLeftClose,
   EllipsisVertical,
   ChartCandlestick,
   Trash2,
@@ -405,7 +406,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                 onClick={toggleSidebar}
                 className="ml-3 p-2 rounded hover:bg-neutral-100 transition"
               >
-                <PanelLeftOpen size={16} />
+                <PanelLeftClose size={18} />
               </button>
             </div>
 

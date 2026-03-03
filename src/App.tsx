@@ -29,6 +29,8 @@ import socketService from "./services/socketService";
 import AddHoliday from "./pages/Settings/AddHoliday";
 import ExceptionalHoliday from "./pages/Settings/ExceptionalHoliday";
 import AddExceptionalHoliday from "./pages/Settings/AddExceptionalHoliday";
+import ClientSetting from "./pages/Settings/ClientSetting";
+import AddClient from "./pages/Settings/AddClient";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -96,6 +98,8 @@ const router = createBrowserRouter([
         path: "edit-exceptional-holiday/:id",
         element: <AddExceptionalHoliday />,
       },
+      { path: "/client-data", element: <ClientSetting /> },
+      { path: "/add-client-data", element: <AddClient /> },
     ],
   },
 ]);
