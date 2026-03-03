@@ -34,6 +34,7 @@ import {
 import { getEnabledClientList } from "../services/SettingsService/userSettingsApi";
 import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
+import Loader from "../components/Loader";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -731,6 +732,10 @@ export default function TradeBook() {
       setLoadingField(false);
     }
   };
+
+  if (loading) {
+    return <Loader />;
+  }
   return (
     <div className="h-full flex flex-col bg-slate-100 p-2 sm:p-4 relative z-0">
       <Card
@@ -1298,17 +1303,21 @@ export default function TradeBook() {
   
   /* 1. ROOT TABLE & CONTAINER - Force Collapse to Remove Gaps */
   .tradebook-table-compact .ant-table {
-    font-family: 'Inter', -apple-system, sans-serif;
+   
     font-size: 11px;
     background: #ffffff;
     margin: 0 !important;
     border-spacing: 0 !important;
     border-collapse: collapse !important;
   }
+    .ant-table-body {
+     min-height: calc(100vh - 180px) !important;
+    }
 
   /* Fixes the white gap between header and body caused by 'sticky' prop */
   .tradebook-table-compact .ant-table-header,
   .tradebook-table-compact .ant-table-body {
+ 
     margin: 0 !important;
     padding: 0 !important;
   }
