@@ -31,6 +31,8 @@ import ExceptionalHoliday from "./pages/Settings/ExceptionalHoliday";
 import AddExceptionalHoliday from "./pages/Settings/AddExceptionalHoliday";
 import ClientSetting from "./pages/Settings/ClientSetting";
 import AddClient from "./pages/Settings/AddClient";
+import MoneyManegement from "./pages/Settings/MoneyManegement";
+import AddMoneyManagement from "./pages/Settings/AddMoneyManagement";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -101,6 +103,9 @@ const router = createBrowserRouter([
       { path: "/client-data", element: <ClientSetting /> },
       { path: "/add-client-data", element: <AddClient /> },
       { path: "/client-data/:id", element: <AddClient /> },
+      { path: "/money-management", element: <MoneyManegement /> },
+      { path: "/add-money-management", element: <AddMoneyManagement /> },
+      { path: "/edit-money-management/:id", element: <AddMoneyManagement /> },
     ],
   },
 ]);

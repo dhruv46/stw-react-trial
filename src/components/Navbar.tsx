@@ -71,7 +71,7 @@ const nav: NavItem[] = [
       },
       { to: "/client-data", label: "Client Data" },
       { to: "javascript:void(0)", label: "Charges" },
-      { to: "javascript:void(0)", label: "Money Management" },
+      { to: "/money-management", label: "Money Management" },
       { to: "javascript:void(0)", label: "Contract Note" },
     ],
   },
