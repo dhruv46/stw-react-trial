@@ -27,6 +27,8 @@ import Holiday from "./pages/Settings/Holiday";
 import TradeBook from "./pages/TradeBook";
 import socketService from "./services/socketService";
 import AddHoliday from "./pages/Settings/AddHoliday";
+import ExceptionalHoliday from "./pages/Settings/ExceptionalHoliday";
+import AddExceptionalHoliday from "./pages/Settings/AddExceptionalHoliday";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -88,6 +90,12 @@ const router = createBrowserRouter([
       { path: "holiday", element: <Holiday /> },
       { path: "add-holiday", element: <AddHoliday /> },
       { path: "edit-holiday/:id", element: <AddHoliday /> },
+      { path: "exceptional-setting", element: <ExceptionalHoliday /> },
+      { path: "add-exceptional-holiday", element: <AddExceptionalHoliday /> },
+      {
+        path: "edit-exceptional-holiday/:id",
+        element: <AddExceptionalHoliday />,
+      },
     ],
   },
 ]);
