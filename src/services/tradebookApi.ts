@@ -49,3 +49,10 @@ export const updateTradeBookFieldApi = (payload: {
 }) => {
   return API.post("/update_missing_field_tradebook", payload);
 };
+
+// ==============================
+// Fetch Trade Book
+// ==============================
+export const fetchFieldTradeBookApi = (filed: string) => {
+  return API.get(`/fetch_unique_field_value?type=${filed}`);
+};

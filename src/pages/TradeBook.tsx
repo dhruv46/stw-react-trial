@@ -20,13 +20,16 @@ import {
   message,
   Input,
   Form,
+  Radio,
 } from "antd";
+import type { RadioChangeEvent } from "antd";
 import type { ColumnsType, ColumnType } from "antd/es/table";
 import {
   fetchTradeBookApi,
   insertTradeBookCsvApi,
   updateTradeBookFieldApi,
   fetchEditTradeBookApi,
+  fetchFieldTradeBookApi,
 } from "../services/tradebookApi";
 import { getEnabledClientList } from "../services/SettingsService/userSettingsApi";
 import dayjs from "dayjs";
@@ -154,6 +157,13 @@ export default function TradeBook() {
   const [csvData, setCsvData] = useState<string[][]>([]); // CSV parsed data
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedField, setSelectedField] = useState<string>("");
+  const [dropdownOptions, setDropdownOptions] = useState<string[]>([]);
+  const [loadingField, setLoadingField] = useState(false);
+  const [selectedValue, setSelectedValue] = useState<string>("");
+  const [saving, setSaving] = useState(false);
 
   const location = useLocation();
 
@@ -679,6 +689,48 @@ export default function TradeBook() {
         fixed: true,
       }
     : undefined;
+
+  const handleUpdateMissingFields = () => {
+    if (!selectedRowKeys.length) {
+      message.error("Please select at least one row.");
+      return;
+    }
+
+    // Convert all ids to string
+    const ids = selectedRowKeys.map((id) => String(id));
+
+    setSelectedIds(ids);
+    setIsUpdateModalOpen(true);
+  };
+
+  const handleFieldChange = async (e: RadioChangeEvent) => {
+    const value = e.target.value;
+    setSelectedField(value);
+    setDropdownOptions([]);
+
+    try {
+      setLoadingField(true);
+
+      const response = await fetchFieldTradeBookApi(value);
+
+      // Expected response:
+      // {"result":{"portfolio":["","1","142"]}}
+
+      const resultObj = response.data?.result;
+
+      if (resultObj && resultObj[value]) {
+        const filteredValues = resultObj[value].filter(
+          (item: string) => item !== "",
+        );
+        setDropdownOptions(filteredValues);
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to fetch field data");
+    } finally {
+      setLoadingField(false);
+    }
+  };
   return (
     <div className="h-full flex flex-col bg-slate-100 p-2 sm:p-4 relative z-0">
       <Card
@@ -775,7 +827,10 @@ export default function TradeBook() {
               </Button>
 
               {isTradeEditMode && (
-                <Button className="bg-orange-600 text-white border-none col-span-2">
+                <Button
+                  className="bg-orange-600 text-white border-none col-span-2"
+                  onClick={handleUpdateMissingFields}
+                >
                   Update Missing Fields
                 </Button>
               )}
@@ -876,7 +931,7 @@ export default function TradeBook() {
               {isTradeEditMode && (
                 <Button
                   className="bg-blue-600 text-white border-none"
-                  // onClick={() => setIsModalOpen(true)}
+                  onClick={handleUpdateMissingFields}
                 >
                   Update Missing Fields
                 </Button>
@@ -1128,6 +1183,109 @@ export default function TradeBook() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </Modal>
+
+        <Modal
+          open={isUpdateModalOpen}
+          onCancel={() => setIsUpdateModalOpen(false)}
+          title="Update Missing Fields"
+          centered
+          footer={[
+            <Button key="cancel" onClick={() => setIsUpdateModalOpen(false)}>
+              Cancel
+            </Button>,
+            <Button
+              key="save"
+              type="primary"
+              disabled={!selectedField || !selectedValue}
+              loading={saving}
+              onClick={async () => {
+                try {
+                  setSaving(true);
+
+                  const payload = {
+                    id: selectedIds.join(","), // convert array to comma string
+                    field_name: selectedField,
+                    field_value: selectedValue,
+                  };
+
+                  const response = await updateTradeBookFieldApi(payload);
+
+                  if (response?.data?.result) {
+                    message.success(response.data.result);
+                  }
+
+                  // Reset everything
+                  setSelectedRowKeys([]);
+                  setSelectedIds([]);
+                  setSelectedField("");
+                  setSelectedValue("");
+                  setDropdownOptions([]);
+                  setIsUpdateModalOpen(false);
+                } catch (error) {
+                  console.error(error);
+                  message.error("Failed to update trade book");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              Save
+            </Button>,
+          ]}
+        >
+          <div className="space-y-4">
+            {/* Label */}
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              Select Field
+            </div>
+
+            {/* Radio Buttons in One Row */}
+            <Radio.Group
+              onChange={handleFieldChange}
+              value={selectedField}
+              className="flex items-center gap-6"
+            >
+              <Radio value="portfolio" className="text-sm">
+                Portfolio
+              </Radio>
+
+              <Radio value="contract_note_id" className="text-sm">
+                Contract Note ID
+              </Radio>
+
+              <Radio value="nature" className="text-sm">
+                Nature
+              </Radio>
+            </Radio.Group>
+
+            {/* Dropdown Section */}
+            {selectedField && (
+              <div className="pt-2">
+                <div className="text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                  Select Value
+                </div>
+
+                {loadingField ? (
+                  <div className="flex justify-center py-4">
+                    <Spin size="small" />
+                  </div>
+                ) : (
+                  <Select
+                    size="small"
+                    placeholder="Select Value"
+                    style={{ width: "100%" }}
+                    value={selectedValue}
+                    onChange={(value) => setSelectedValue(value)}
+                    options={dropdownOptions.map((item) => ({
+                      label: item,
+                      value: item,
+                    }))}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </Modal>
       </Card>
