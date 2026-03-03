@@ -26,6 +26,7 @@ import {
   fetchTradeBookApi,
   insertTradeBookCsvApi,
   updateTradeBookFieldApi,
+  fetchEditTradeBookApi,
 } from "../services/tradebookApi";
 import { getEnabledClientList } from "../services/SettingsService/userSettingsApi";
 import dayjs from "dayjs";
@@ -132,6 +133,7 @@ interface TradeBookRow {
 }
 
 export default function TradeBook() {
+  const [allData, setAllData] = useState<TradeBookRow[]>([]);
   const [data, setData] = useState<TradeBookRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
@@ -151,12 +153,14 @@ export default function TradeBook() {
   const [fileList, setFileList] = useState<any[]>([]);
   const [csvData, setCsvData] = useState<string[][]>([]); // CSV parsed data
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const location = useLocation();
 
   const endpoint = location.pathname.split("/")[1];
 
   const mode = endpoint === "sim-trade-book" ? "sim" : "live";
+  const isTradeEditMode = location.pathname.includes("trade-edit-mode");
 
   // ================================
   // Fetch Clients for Modal Dropdown
@@ -185,12 +189,21 @@ export default function TradeBook() {
     try {
       setLoading(true);
 
-      const res = await fetchTradeBookApi(
-        filters.startDate,
-        filters.endDate,
-        false,
-        mode,
-      );
+      let res;
+      if (isTradeEditMode) {
+        res = await fetchEditTradeBookApi(
+          filters.startDate,
+          filters.endDate,
+          false,
+        );
+      } else {
+        res = await fetchTradeBookApi(
+          filters.startDate,
+          filters.endDate,
+          false,
+          mode,
+        );
+      }
 
       // ✅ adjust according backend response
       const apiData = res.data?.result || res.data?.data || [];
@@ -239,7 +252,8 @@ export default function TradeBook() {
         }),
       );
 
-      setData(formatted);
+      setAllData(formatted);
+      setData(formatted); // initially show full data
     } catch (error) {
       console.error("TradeBook API Error:", error);
     } finally {
@@ -249,7 +263,18 @@ export default function TradeBook() {
 
   useEffect(() => {
     loadTradeBook();
-  }, [filters, mode]);
+  }, [filters.startDate, filters.endDate, mode, isTradeEditMode]);
+
+  useEffect(() => {
+    if (filters.broker === "All") {
+      setData(allData);
+    } else {
+      const filtered = allData.filter(
+        (item) => item.broker.toLowerCase() === filters.broker.toLowerCase(),
+      );
+      setData(filtered);
+    }
+  }, [filters.broker, allData]);
 
   // ================================
   // Filter Handlers
@@ -267,8 +292,11 @@ export default function TradeBook() {
     }
   };
 
-  const handleBrokerChange = (value: string) => {
-    setFilters({ ...filters, broker: value });
+  const handleBrokerChange = (value?: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      broker: value || "All",
+    }));
   };
 
   const handleDownload = () => {
@@ -328,20 +356,51 @@ export default function TradeBook() {
   };
 
   // ================= Handle Save =================
+
+  const fieldNameMap: Record<string, string> = {
+    contractNoteId: "contract_note_id",
+    portfolio: "portfolio",
+    nature: "nature",
+    remarks: "remarks",
+  };
+
   const handleSave = async (row: TradeBookRow) => {
     try {
-      await updateTradeBookFieldApi({
-        id: String(row.id), // <-- cast to string
-        field_name: "remarks",
-        field_value: String(row.remarks), // ensure string
-      });
-      setData((prev) =>
-        prev.map((r) => (r.key === row.key ? { ...r, ...row } : r)),
+      const originalRow = data.find((r) => r.key === row.key);
+      if (!originalRow) return;
+
+      const changedField = editableFields.find(
+        (field) =>
+          row[field as keyof TradeBookRow] !==
+          originalRow[field as keyof TradeBookRow],
       );
-      message.success("Remarks updated!");
-    } catch (err) {
+
+      if (!changedField) return;
+
+      const response = await updateTradeBookFieldApi({
+        id: String(row.id),
+        field_name: fieldNameMap[changedField],
+        field_value: String(row[changedField as keyof TradeBookRow] ?? ""),
+      });
+
+      // ✅ Access .data.result
+      if (response?.data?.result) {
+        setData((prev) =>
+          prev.map((r) => (r.key === row.key ? { ...r, ...row } : r)),
+        );
+
+        message.success(response.data.result);
+        loadTradeBook();
+      } else {
+        message.error("Update failed!");
+      }
+    } catch (err: any) {
       console.error(err);
-      message.error("Failed to update remarks");
+      message.error(
+        err?.response?.data?.result ||
+          err?.response?.data?.message ||
+          "Something went wrong!",
+      );
     }
   };
   // ================================
@@ -476,31 +535,56 @@ export default function TradeBook() {
     [],
   );
 
+  const editableFields = isTradeEditMode
+    ? ["portfolio", "contractNoteId", "nature", "remarks"]
+    : ["remarks"];
+
   // ================= Columns =================
-  const mergedColumns: ColumnsType<TradeBookRow> = allColumns.map((col) => {
-    if (!("dataIndex" in col)) return col;
 
-    if (col.dataIndex === "remarks") {
-      return {
-        ...col,
-        onCell: (record: TradeBookRow) => ({
-          record,
-          editable: true,
-          dataIndex: col.dataIndex,
-          title: col.title as string, // cast title if needed
-          handleSave,
-        }),
-      } as ColumnType<TradeBookRow>;
-    }
+  // const mergedColumns: ColumnsType<TradeBookRow> = allColumns.map((col) => {
+  //   if (!("dataIndex" in col)) return col;
 
-    return col;
-  });
-  // ================================
-  // Visible Columns
-  // ================================
+  //   if (editableFields.includes(col.dataIndex as string)) {
+  //     return {
+  //       ...col,
+  //       onCell: (record: TradeBookRow) => ({
+  //         record,
+  //         editable: true,
+  //         dataIndex: col.dataIndex,
+  //         title: col.title as string,
+  //         handleSave,
+  //       }),
+  //     } as ColumnType<TradeBookRow>;
+  //   }
+
+  //   return col;
+  // });
   const [visibleColumns, setVisibleColumns] = useState<string[]>(
     allColumns.map((c) => c.key as string),
   );
+
+  const mergedColumns: ColumnsType<TradeBookRow> = useMemo(() => {
+    return allColumns
+      .filter((col) => visibleColumns.includes(col.key as string))
+      .map((col) => {
+        if (!("dataIndex" in col)) return col;
+
+        if (editableFields.includes(col.dataIndex as string)) {
+          return {
+            ...col,
+            onCell: (record: TradeBookRow) => ({
+              record,
+              editable: true,
+              dataIndex: col.dataIndex,
+              title: col.title as string,
+              handleSave,
+            }),
+          } as ColumnType<TradeBookRow>;
+        }
+
+        return col;
+      });
+  }, [allColumns, visibleColumns, editableFields]);
 
   // ================================
   // Filter Visible Columns
@@ -585,6 +669,16 @@ export default function TradeBook() {
     };
     reader.readAsText(uploadedFile);
   };
+
+  const rowSelection = isTradeEditMode
+    ? {
+        selectedRowKeys,
+        onChange: (newSelectedRowKeys: React.Key[]) => {
+          setSelectedRowKeys(newSelectedRowKeys);
+        },
+        fixed: true,
+      }
+    : undefined;
   return (
     <div className="h-full flex flex-col bg-slate-100 p-2 sm:p-4 relative z-0">
       <Card
@@ -616,11 +710,7 @@ export default function TradeBook() {
                 </span>
               </div>
 
-              <Button
-                size="small"
-                icon={<i className="ri-download-line"></i>}
-                onClick={handleDownload}
-              >
+              <Button size="small" onClick={handleDownload}>
                 CSV
               </Button>
             </div>
@@ -669,22 +759,22 @@ export default function TradeBook() {
             </div>
 
             {/* Broker */}
-            <div className="flex flex-col">
-              <span className="text-[11px] text-gray-500 mb-[2px]">Broker</span>
+            <div className="w-1/2 sm:w-[180px]">
               <Select
-                value={filters.broker}
-                onChange={handleBrokerChange}
                 size="small"
-                allowClear
-                className="w-full"
+                value={filters.broker}
+                style={{ width: "100%" }}
+                onChange={handleBrokerChange}
+                options={[
+                  { label: "All Brokers", value: "All" },
+                  { label: "IIFL", value: "iifl" },
+                  { label: "MasterTrust", value: "mastertrust" },
+                  { label: "ZERODHA", value: "zerodha" },
+                  { label: "Greek Soft", value: "greeksoft" },
+                ]}
                 placeholder="All Brokers"
-              >
-                <Option value="All">All Brokers</Option>
-                <Option value="iifl">IIFL</Option>
-                <Option value="mastertrust">MasterTrust</Option>
-                <Option value="zerodha">ZERODHA</Option>
-                <Option value="greeksoft">Greek Soft</Option>
-              </Select>
+                allowClear
+              />
             </div>
           </div>
 
@@ -699,15 +789,20 @@ export default function TradeBook() {
                 </Text>
                 <span
                   className={`text-[11px] font-semibold px-2 py-[2px] rounded-md border
-            ${
-              mode === "live"
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-blue-50 text-blue-700 border-blue-200"
-            }`}
+    ${
+      isTradeEditMode
+        ? "bg-orange-50 text-orange-700 border-orange-200"
+        : mode === "live"
+          ? "bg-green-50 text-green-700 border-green-200"
+          : "bg-blue-50 text-blue-700 border-blue-200"
+    }`}
                 >
-                  {mode === "live" ? "LIVE" : "SIMULATOR"}
+                  {isTradeEditMode
+                    ? "EDIT"
+                    : mode === "live"
+                      ? "LIVE"
+                      : "SIMULATOR"}
                 </span>
-
                 <div className="hidden sm:block h-5 w-px bg-gray-200" />
               </div>
 
@@ -756,7 +851,6 @@ export default function TradeBook() {
             {/* RIGHT ACTIONS */}
             <div className="flex justify-end items-center w-full lg:w-auto gap-2">
               <Button
-                icon={<i className="ri-download-line"></i>}
                 onClick={handleDownload}
                 size="middle"
                 className="bg-emerald-600 text-white border-none hover:!bg-emerald-700 flex items-center gap-1 shadow-sm"
@@ -765,17 +859,23 @@ export default function TradeBook() {
               </Button>
 
               <Button
-                icon={<i className="ri-upload-2-line"></i>}
                 className="bg-blue-600 text-white border-none"
                 onClick={() => setIsModalOpen(true)}
               >
                 Upload
               </Button>
 
-              <Dropdown trigger={["click"]} popupRender={() => columnMenu}>
-                <Button icon={<i className="ri-filter-3-line" />}>
-                  Columns
+              {isTradeEditMode && (
+                <Button
+                  className="bg-blue-600 text-white border-none"
+                  // onClick={() => setIsModalOpen(true)}
+                >
+                  Update Missing Fields
                 </Button>
+              )}
+
+              <Dropdown trigger={["click"]} popupRender={() => columnMenu}>
+                <Button>Columns</Button>
               </Dropdown>
             </div>
           </div>
@@ -790,6 +890,7 @@ export default function TradeBook() {
                 cell: EditableCell,
               },
             }}
+            rowSelection={rowSelection} // 👈 ADD THIS
             columns={mergedColumns}
             dataSource={data}
             loading={loading}

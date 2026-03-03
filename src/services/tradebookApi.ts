@@ -15,6 +15,19 @@ export const fetchTradeBookApi = (
 };
 
 // ==============================
+// Fetch Trade Book
+// ==============================
+export const fetchEditTradeBookApi = (
+  startDate: string,
+  endDate: string,
+  csv: boolean = false,
+) => {
+  return API.get(
+    `/fetch_missing_field_tradebook?start_date=${startDate}&end_date=${endDate}&csv=${csv}`,
+  );
+};
+
+// ==============================
 // Insert Trade Book CSV
 // ==============================
 export const insertTradeBookCsvApi = (payload: {

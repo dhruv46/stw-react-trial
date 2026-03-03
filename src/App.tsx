@@ -77,6 +77,7 @@ const router = createBrowserRouter([
       { path: "download-report", element: <DownloadReport /> },
       { path: "trades", element: <TradeBook /> },
       { path: "sim-trade-book", element: <TradeBook /> },
+      { path: "trade-edit-mode", element: <TradeBook /> },
 
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
