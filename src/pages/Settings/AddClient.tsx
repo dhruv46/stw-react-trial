@@ -21,8 +21,9 @@ import {
   fetchZerodhaApiList,
   fetchMastertrustApiList,
   addClientDataApi,
+  getClientByIdApi,
 } from "../../services/SettingsService/clientSettingApi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 const { Option } = Select;
 
@@ -32,12 +33,6 @@ interface Strategy {
   strategy_enabled: boolean;
 }
 
-interface StrategyResponse {
-  data: {
-    result: Strategy[];
-  };
-}
-
 const AddClient: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
@@ -45,6 +40,43 @@ const AddClient: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [apiList, setApiList] = useState<{ id: number; name: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
+  const { id } = useParams();
+
+  useEffect(() => {
+    const loadClientById = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+
+        const res = await getClientByIdApi(Number(id));
+        const data = res?.data?.result?.[0];
+
+        if (!data) return;
+
+        // Load broker APIs first
+        await loadBrokerApis(
+          data.broker === "greeksoft" ? "angel" : data.broker,
+        );
+
+        // Set form values
+        form.setFieldsValue({
+          name: data.name,
+          broker: data.broker === "greeksoft" ? "angel" : data.broker,
+          api: data.api,
+          strategies: data.strategy || [],
+          mode: data.mode,
+          is_enabled: data.is_enabled,
+        });
+      } catch (error) {
+        message.error("Failed to load client data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadClientById();
+  }, [id]);
 
   // ===============================
   // Fetch Strategy List
@@ -72,7 +104,7 @@ const AddClient: React.FC = () => {
     try {
       setApiLoading(true);
       setApiList([]);
-      form.setFieldsValue({ api: undefined }); // reset api select
+      //   form.setFieldsValue({ api: undefined }); // reset api select
 
       let res;
 
@@ -106,18 +138,52 @@ const AddClient: React.FC = () => {
     }
   };
 
-
   // ===============================
   // Submit
   // ===============================
+  //   const onFinish = async (values: any) => {
+  //     try {
+  //       setLoading(true);
+
+  //       const payload = {
+  //         id: 0,
+  //         name: values.name,
+  //         broker: values.broker === "angel" ? "greeksoft" : values.broker, // fix mapping
+  //         api: values.api,
+  //         strategy: Array.isArray(values.strategies)
+  //           ? values.strategies
+  //           : [values.strategies],
+  //         mode: values.mode,
+  //         is_enabled: values.is_enabled,
+  //       };
+
+  //       console.log("Payload:", payload);
+
+  //       const res = await addClientDataApi(payload);
+
+  //       console.log("Response:", res);
+
+  //       if (res?.data?.result?.[0] === "Request Received") {
+  //         message.success("Client Created Successfully");
+  //         form.resetFields();
+  //         navigate("/client-data");
+  //       } else {
+  //         message.error("Failed to create client");
+  //       }
+  //     } catch (error: any) {
+  //       message.error(error?.response?.data?.message || "Something went wrong");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
   const onFinish = async (values: any) => {
     try {
       setLoading(true);
 
       const payload = {
-        id: 0,
+        id: id ? Number(id) : 0, // 🔥 THIS IS THE KEY CHANGE
         name: values.name,
-        broker: values.broker === "angel" ? "greeksoft" : values.broker, // fix mapping
+        broker: values.broker === "angel" ? "greeksoft" : values.broker,
         api: values.api,
         strategy: Array.isArray(values.strategies)
           ? values.strategies
@@ -126,18 +192,18 @@ const AddClient: React.FC = () => {
         is_enabled: values.is_enabled,
       };
 
-      console.log("Payload:", payload);
-
       const res = await addClientDataApi(payload);
 
-      console.log("Response:", res);
-
       if (res?.data?.result?.[0] === "Request Received") {
-        message.success("Client Created Successfully");
-        form.resetFields();
+        message.success(
+          id ? "Client Updated Successfully" : "Client Created Successfully",
+        );
+
         navigate("/client-data");
       } else {
-        message.error("Failed to create client");
+        message.error(
+          id ? "Failed to update client" : "Failed to create client",
+        );
       }
     } catch (error: any) {
       message.error(error?.response?.data?.message || "Something went wrong");

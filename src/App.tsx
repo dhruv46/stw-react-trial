@@ -100,6 +100,7 @@ const router = createBrowserRouter([
       },
       { path: "/client-data", element: <ClientSetting /> },
       { path: "/add-client-data", element: <AddClient /> },
+      { path: "/client-data/:id", element: <AddClient /> },
     ],
   },
 ]);

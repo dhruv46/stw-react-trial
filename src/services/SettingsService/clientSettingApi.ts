@@ -32,3 +32,7 @@ export const addClientDataApi = (data: any) => {
 export const deleteClientDataApi = (id: number) => {
   return API.get(`/delete_client_master?api_id=${id}`);
 };
+
+export const getClientByIdApi = (id: number) => {
+  return API.get(`/get_client_master?api_id=${id}`);
+};

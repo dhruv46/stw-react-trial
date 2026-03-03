@@ -183,7 +183,7 @@ const ClientSetting = () => {
             size="small"
             type="text"
             icon={<FiEdit2 size={14} />}
-            onClick={() => navigate(`/edit-client-account/${record.id}`)}
+            onClick={() => navigate(`/client-data/${record.id}`)}
           />
           <Button
             size="small"
