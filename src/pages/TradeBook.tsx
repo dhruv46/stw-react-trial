@@ -688,83 +688,64 @@ export default function TradeBook() {
         styles={{ body: { padding: 0 } }} // replaces bodyStyle
       >
         {/* ================= HEADER ================= */}
-        {/* ================= HEADER ================= */}
         <div className="px-5 py-3 border-b bg-white rounded-t-2xl">
           {/* MOBILE DESIGN */}
-          <div className="flex flex-col gap-3 lg:hidden">
-            {/* Header Title + Mode */}
+          {/* MOBILE DESIGN */}
+          <div className="flex flex-col gap-4 lg:hidden">
+            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Text strong className="text-[15px] text-gray-800">
                   Trade Book
                 </Text>
+
                 <span
                   className={`text-[10px] font-semibold px-2 py-[2px] rounded-md border
-            ${
-              mode === "live"
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-blue-50 text-blue-700 border-blue-200"
-            }`}
+        ${
+          isTradeEditMode
+            ? "bg-orange-50 text-orange-700 border-orange-200"
+            : mode === "live"
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-blue-50 text-blue-700 border-blue-200"
+        }`}
                 >
-                  {mode === "live" ? "LIVE" : "SIMULATOR"}
+                  {isTradeEditMode
+                    ? "EDIT"
+                    : mode === "live"
+                      ? "LIVE"
+                      : "SIMULATOR"}
                 </span>
               </div>
-
-              <Button size="small" onClick={handleDownload}>
-                CSV
-              </Button>
             </div>
 
-            {/* Date Range */}
-            <div className="space-y-1.5">
-              {/* Start Date */}
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="w-4 text-green-500 font-semibold">→</span>
-                <span>Start Date</span>
-              </div>
-              <DatePicker
+            {/* Filters Section */}
+            <div className="flex flex-col gap-3">
+              {/* Date Range */}
+              <RangePicker
                 size="small"
-                value={dayjs(filters.startDate)}
-                onChange={(date) =>
+                value={[dayjs(filters.startDate), dayjs(filters.endDate)]}
+                onChange={(dates) =>
                   setFilters({
                     ...filters,
-                    startDate: date
-                      ? date.format("YYYY-MM-DD")
+                    startDate: dates?.[0]
+                      ? dates[0].format("YYYY-MM-DD")
                       : filters.startDate,
+                    endDate: dates?.[1]
+                      ? dates[1].format("YYYY-MM-DD")
+                      : filters.endDate,
                   })
                 }
                 style={{ width: "100%" }}
-                placeholder="Start Date"
                 format="YYYY-MM-DD"
               />
 
-              {/* End Date */}
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="w-4 text-red-500 font-semibold">←</span>
-                <span>End Date</span>
-              </div>
-              <DatePicker
-                size="small"
-                value={dayjs(filters.endDate)}
-                onChange={(date) =>
-                  setFilters({
-                    ...filters,
-                    endDate: date ? date.format("YYYY-MM-DD") : filters.endDate,
-                  })
-                }
-                style={{ width: "100%" }}
-                placeholder="End Date"
-                format="YYYY-MM-DD"
-              />
-            </div>
-
-            {/* Broker */}
-            <div className="w-1/2 sm:w-[180px]">
+              {/* Broker */}
               <Select
                 size="small"
                 value={filters.broker}
                 style={{ width: "100%" }}
                 onChange={handleBrokerChange}
+                placeholder="All Brokers"
                 options={[
                   { label: "All Brokers", value: "All" },
                   { label: "IIFL", value: "iifl" },
@@ -772,9 +753,36 @@ export default function TradeBook() {
                   { label: "ZERODHA", value: "zerodha" },
                   { label: "Greek Soft", value: "greeksoft" },
                 ]}
-                placeholder="All Brokers"
                 allowClear
               />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="middle"
+                onClick={handleDownload}
+                className="bg-emerald-600 text-white border-none hover:!bg-emerald-700 shadow-sm"
+              >
+                CSV
+              </Button>
+
+              <Button
+                className="bg-blue-600 text-white border-none"
+                onClick={() => setIsModalOpen(true)}
+              >
+                Upload
+              </Button>
+
+              {isTradeEditMode && (
+                <Button className="bg-orange-600 text-white border-none col-span-2">
+                  Update Missing Fields
+                </Button>
+              )}
+
+              <Dropdown trigger={["click"]} popupRender={() => columnMenu}>
+                <Button className="col-span-2">Columns</Button>
+              </Dropdown>
             </div>
           </div>
 
