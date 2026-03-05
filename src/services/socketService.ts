@@ -300,7 +300,7 @@ class SocketService {
       frame += `${k}:${v}\n`;
     });
 
-    frame += "\n" + body + "\0";
+    frame += "\n" + body + "\\x00";
 
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(frame);

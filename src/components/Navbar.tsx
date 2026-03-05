@@ -271,13 +271,13 @@ const Navbar: React.FC = () => {
               </span>
               <div className="flex items-center gap-3 tabular-nums">
                 <span
-                  className={`font-semibold ${marketData["1_26000"]?.PercentChange! >= 0 ? "text-green-600" : "text-red-600"}`}
+                  className={`font-semibold ${marketData["2600001011900026000"]?.PercentChange! >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
-                  {marketData["1_26000"]?.Price?.toFixed(2) ?? "0.00"}
+                  {marketData["26000010119000"]?.Price?.toFixed(2) ?? "0.00"}
                 </span>
                 <span className="text-gray-500">
-                  {marketData["1_26000"]
-                    ? `${marketData["1_26000"]?.ChangeValue?.toFixed(2)} (${marketData["1_26000"]?.PercentChange?.toFixed(2)}%)`
+                  {marketData["26000010119000"]
+                    ? `${marketData["26000010119000"]?.ChangeValue?.toFixed(2)} (${marketData["26000010119000"]?.PercentChange?.toFixed(2)}%)`
                     : "0.00 (0.00%)"}
                 </span>
               </div>
@@ -290,17 +290,16 @@ const Navbar: React.FC = () => {
               </span>
               <div className="flex items-center gap-3 tabular-nums">
                 <span
-                  className={`font-semibold ${
-                    marketData["11_26065"]?.PercentChange! >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
+                  className={`font-semibold ${marketData["260650101190001"]?.PercentChange! >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                    }`}
                 >
-                  {marketData["11_26065"]?.Price?.toFixed(2) ?? "0.00"}
+                  {marketData["260650101190001"]?.Price?.toFixed(2) ?? "0.00"}
                 </span>
                 <span className="text-gray-500">
-                  {marketData["11_26065"]
-                    ? `${marketData["11_26065"]?.ChangeValue?.toFixed(2)} (${marketData["11_26065"]?.PercentChange?.toFixed(2)}%)`
+                  {marketData["260650101190001"]
+                    ? `${marketData["260650101190001"]?.ChangeValue?.toFixed(2)} (${marketData["260650101190001"]?.PercentChange?.toFixed(2)}%)`
                     : "0.00 (0.00%)"}
                 </span>
               </div>
@@ -348,9 +347,8 @@ const Navbar: React.FC = () => {
                           {item.label}
                           <ChevronDown
                             size={14}
-                            className={`transition-transform ${
-                              activeMenu === index ? "rotate-180" : ""
-                            }`}
+                            className={`transition-transform ${activeMenu === index ? "rotate-180" : ""
+                              }`}
                           />
                         </button>
 
@@ -372,11 +370,10 @@ const Navbar: React.FC = () => {
                                         location.pathname + location.search ===
                                         child.to;
 
-                                      return `block px-3 py-2 text-xs rounded-md transition ${
-                                        isActive
-                                          ? "bg-gray-100 text-blue-600 font-medium"
-                                          : "text-gray-700 hover:bg-gray-100"
-                                      }`;
+                                      return `block px-3 py-2 text-xs rounded-md transition ${isActive
+                                        ? "bg-gray-100 text-blue-600 font-medium"
+                                        : "text-gray-700 hover:bg-gray-100"
+                                        }`;
                                     }}
                                   >
                                     {child.label}
@@ -395,11 +392,10 @@ const Navbar: React.FC = () => {
 
                                       <ChevronRight
                                         size={14}
-                                        className={`ml-2 transition-transform ${
-                                          activeSubMenu === idx
-                                            ? "rotate-90"
-                                            : ""
-                                        }`}
+                                        className={`ml-2 transition-transform ${activeSubMenu === idx
+                                          ? "rotate-90"
+                                          : ""
+                                          }`}
                                       />
                                     </button>
 
@@ -415,10 +411,9 @@ const Navbar: React.FC = () => {
                                                 setActiveSubMenu(null);
                                               }}
                                               className={({ isActive }) =>
-                                                `block px-3 py-2 text-xs rounded-md transition ${
-                                                  isActive
-                                                    ? "bg-gray-100 text-blue-600"
-                                                    : "text-gray-700 hover:bg-gray-100"
+                                                `block px-3 py-2 text-xs rounded-md transition ${isActive
+                                                  ? "bg-gray-100 text-blue-600"
+                                                  : "text-gray-700 hover:bg-gray-100"
                                                 }`
                                               }
                                             >
@@ -476,10 +471,9 @@ const Navbar: React.FC = () => {
                   to="/userInfo"
                   onClick={() => setUserMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block px-3 py-2 text-xs rounded-md font-medium mb-1 transition ${
-                      isActive
-                        ? "bg-gray-100 text-blue-600"
-                        : "text-gray-700 hover:bg-gray-100"
+                    `block px-3 py-2 text-xs rounded-md font-medium mb-1 transition ${isActive
+                      ? "bg-gray-100 text-blue-600"
+                      : "text-gray-700 hover:bg-gray-100"
                     }`
                   }
                 >
@@ -514,9 +508,8 @@ const Navbar: React.FC = () => {
                           {item.label}
                           <ChevronDown
                             size={14}
-                            className={`transition-transform ${
-                              mobileActive === index ? "rotate-180" : ""
-                            }`}
+                            className={`transition-transform ${mobileActive === index ? "rotate-180" : ""
+                              }`}
                           />
                         </button>
 
@@ -555,11 +548,10 @@ const Navbar: React.FC = () => {
                                         {child.label}
                                         <ChevronRight
                                           size={14}
-                                          className={`transition-transform ${
-                                            mobileSubActive === subKey
-                                              ? "rotate-90"
-                                              : ""
-                                          }`}
+                                          className={`transition-transform ${mobileSubActive === subKey
+                                            ? "rotate-90"
+                                            : ""
+                                            }`}
                                         />
                                       </button>
 

@@ -98,6 +98,50 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
     fetchWatchlist();
   }, [active]);
 
+
+  useEffect(() => {
+    if (!isOpen || !watchlist.length) return;
+
+    const instrumentKeys = watchlist
+      .map((w) => w.instrumentKey)
+      .filter(Boolean);
+
+    instrumentKeys.forEach((inst) => {
+      const topic = `tick_message_${inst}`;
+
+      socketService.subscribe(topic, (frame: any) => {
+        try {
+          const outer = JSON.parse(frame.body);
+          const inner = JSON.parse(outer.data);
+
+          setWatchlist((prev) =>
+            prev.map((w) =>
+              w.instrumentKey === inst
+                ? {
+                  ...w,
+                  last: inner.Price ?? w.last,
+                  change: inner.PercentChange ?? w.change,
+                  changeValue: inner.ChangeValue ?? w.changeValue,
+                }
+                : w
+            )
+          );
+        } catch (err) {
+          console.error("Socket parse error", err);
+        }
+      });
+    });
+
+    return () => {
+      instrumentKeys.forEach((inst) => {
+        socketService.unsubscribe(`tick_message_${inst}`);
+      });
+    };
+  }, [
+    isOpen,
+    watchlist.map((w) => w.instrumentKey).join(","), // ✅ only keys
+  ]);
+
   // useEffect(() => {
   //   if (!watchlist.length) return;
 
@@ -160,11 +204,11 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
           prev.map((w) =>
             w.instrumentKey === item.instrumentKey
               ? {
-                  ...w,
-                  last: inner.Price ?? w.last,
-                  change: inner.PercentChange ?? w.change,
-                  changeValue: inner.ChangeValue ?? w.changeValue,
-                }
+                ...w,
+                last: inner.Price ?? w.last,
+                change: inner.PercentChange ?? w.change,
+                changeValue: inner.ChangeValue ?? w.changeValue,
+              }
               : w,
           ),
         );
@@ -346,7 +390,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                                       ? item.DetailedDescription
                                       : "",
 
-                                  last: Number(item.ltp ?? 0),
+                                  last: Number(item.last ?? 0),
 
                                   change: Number(item.PercentChange ?? 0),
 
@@ -441,9 +485,8 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                 >
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-[2px] h-3 ${
-                        s.change >= 0 ? "bg-emerald-500" : "bg-rose-500"
-                      }`}
+                      className={`w-[2px] h-3 ${s.change >= 0 ? "bg-emerald-500" : "bg-rose-500"
+                        }`}
                     />
 
                     <div className="text-[13px] font-medium text-neutral-700">
@@ -462,9 +505,8 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                     >
                       {/* LTP */}
                       <div
-                        className={`w-[85px] text-right font-medium ${
-                          s.change >= 0 ? "text-emerald-500" : "text-rose-500"
-                        }`}
+                        className={`w-[85px] text-right font-medium ${s.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                          }`}
                       >
                         {s.last.toLocaleString("en-IN", {
                           minimumFractionDigits: 2,
@@ -655,11 +697,10 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
               <button
                 key={t}
                 onClick={() => setActive(t)}
-                className={`flex-1 py-3 text-xs font-semibold relative ${
-                  active === t
-                    ? "text-orange-600"
-                    : "text-neutral-500 hover:bg-neutral-50"
-                }`}
+                className={`flex-1 py-3 text-xs font-semibold relative ${active === t
+                  ? "text-orange-600"
+                  : "text-neutral-500 hover:bg-neutral-50"
+                  }`}
               >
                 {t}
 
