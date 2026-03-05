@@ -33,6 +33,10 @@ import ClientSetting from "./pages/Settings/ClientSetting";
 import AddClient from "./pages/Settings/AddClient";
 import MoneyManegement from "./pages/Settings/MoneyManegement";
 import AddMoneyManagement from "./pages/Settings/AddMoneyManagement";
+import GreekSoftList from "./pages/Settings/GreekSoftList";
+import AddGreekSoft from "./pages/Settings/AddGreekSoft";
+import IiflList from "./pages/Settings/IiflList";
+import AddIifl from "./pages/Settings/AddIifl";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -106,6 +110,12 @@ const router = createBrowserRouter([
       { path: "/money-management", element: <MoneyManegement /> },
       { path: "/add-money-management", element: <AddMoneyManagement /> },
       { path: "/edit-money-management/:id", element: <AddMoneyManagement /> },
+      { path: "/greek-soft", element: <GreekSoftList /> },
+      { path: "/add-greek-soft", element: <AddGreekSoft /> },
+      { path: "/edit-greek-soft/:id", element: <AddGreekSoft /> },
+      { path: "/iifl", element: <IiflList /> },
+      { path: "/add-iifl", element: <AddIifl /> },
+      { path: "/edit-iifl/:id", element: <AddIifl /> },
     ],
   },
 ]);

@@ -62,8 +62,8 @@ const nav: NavItem[] = [
       {
         label: "Broker Settings",
         children: [
-          { to: "javascript:void(0)", label: "Greek Soft" },
-          { to: "javascript:void(0)", label: "IIFL" },
+          { to: "/greek-soft", label: "Greek Soft" },
+          { to: "/iifl", label: "IIFL" },
           { to: "javascript:void(0)", label: "Zerodha" },
           { to: "javascript:void(0)", label: "True Data" },
           { to: "javascript:void(0)", label: "Master Trust" },
