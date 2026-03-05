@@ -490,7 +490,7 @@ const Charges = () => {
   padding: 0 4px;
   font-size: 10px;
   color: #64748b;
-  z-index: 10;
+
 }
 .custom-range-picker {
   height: 32px !important;
@@ -502,7 +502,7 @@ const Charges = () => {
   font-size: 11px;
 }
 .charges-table .ant-table-thead > tr > th {
-  background: white !important; 
+  background: white !important;
   font-size: 11px;
   font-weight: 700;
   padding: 8px 12px !important;
@@ -510,6 +510,7 @@ const Charges = () => {
   line-height: 1.2;
   white-space: nowrap;
   border-bottom: 1px solid #f0f0f0;
+  z-index: 1 !important;
 }
 .charges-table .ant-table-tbody > tr > td {
   padding: 4px 12px !important;
@@ -532,6 +533,9 @@ const Charges = () => {
 }
 .capitalize {
   text-transform: capitalize;
+}
+  .charges-table .ant-table-sticky-holder {
+  z-index: 1 !important;
 }
 `}
       </style>
