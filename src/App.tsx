@@ -43,6 +43,7 @@ import MasterTrustList from "./pages/Settings/MasterTrustList";
 import AddMasterTrust from "./pages/Settings/AddMasterTrust";
 import ZerodhaList from "./pages/Settings/ZerodhaList";
 import AddZerodha from "./pages/Settings/AddZerodha";
+import Charges from "./pages/Settings/Charges";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -131,6 +132,7 @@ const router = createBrowserRouter([
       { path: "/zerodha", element: <ZerodhaList /> },
       { path: "/add-zerodha", element: <AddZerodha /> },
       { path: "/edit-zerodha/:id", element: <AddZerodha /> },
+      { path: "/charges", element: <Charges /> },
     ],
   },
 ]);
