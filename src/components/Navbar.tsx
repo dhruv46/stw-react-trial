@@ -64,9 +64,9 @@ const nav: NavItem[] = [
         children: [
           { to: "/greek-soft", label: "Greek Soft" },
           { to: "/iifl", label: "IIFL" },
-          { to: "javascript:void(0)", label: "Zerodha" },
-          { to: "javascript:void(0)", label: "True Data" },
-          { to: "javascript:void(0)", label: "Master Trust" },
+          { to: "/zerodha", label: "Zerodha" },
+          { to: "/true-data", label: "True Data" },
+          { to: "/master-trust", label: "Master Trust" },
         ],
       },
       { to: "/client-data", label: "Client Data" },

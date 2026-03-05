@@ -189,7 +189,7 @@ const Holiday = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-65px)] bg-slate-100 p-3 overflow-hidden">
+    <div className="max-h-screen bg-slate-100 p-3 overflow-hidden">
       <Card
         size="small"
         className="h-full flex flex-col rounded-xl border bg-white shadow-sm"

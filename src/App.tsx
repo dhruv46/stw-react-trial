@@ -37,6 +37,12 @@ import GreekSoftList from "./pages/Settings/GreekSoftList";
 import AddGreekSoft from "./pages/Settings/AddGreekSoft";
 import IiflList from "./pages/Settings/IiflList";
 import AddIifl from "./pages/Settings/AddIifl";
+import TrueDataList from "./pages/Settings/TrueDataList";
+import AddTrueData from "./pages/Settings/AddTrueData";
+import MasterTrustList from "./pages/Settings/MasterTrustList";
+import AddMasterTrust from "./pages/Settings/AddMasterTrust";
+import ZerodhaList from "./pages/Settings/ZerodhaList";
+import AddZerodha from "./pages/Settings/AddZerodha";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -116,6 +122,15 @@ const router = createBrowserRouter([
       { path: "/iifl", element: <IiflList /> },
       { path: "/add-iifl", element: <AddIifl /> },
       { path: "/edit-iifl/:id", element: <AddIifl /> },
+      { path: "/true-data", element: <TrueDataList /> },
+      { path: "/add-true-data", element: <AddTrueData /> },
+      { path: "/edit-truedata/:id", element: <AddTrueData /> },
+      { path: "/master-trust", element: <MasterTrustList /> },
+      { path: "/add-master-trust", element: <AddMasterTrust /> },
+      { path: "/edit-master-trust/:id", element: <AddMasterTrust /> },
+      { path: "/zerodha", element: <ZerodhaList /> },
+      { path: "/add-zerodha", element: <AddZerodha /> },
+      { path: "/edit-zerodha/:id", element: <AddZerodha /> },
     ],
   },
 ]);
