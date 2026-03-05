@@ -102,8 +102,8 @@ const Navbar: React.FC = () => {
       PercentChange: number;
     } | null;
   }>({
-    "1_26000": null, // NIFTY
-    "11_26065": null, // SENSEX
+    "260000101190008": null, // NIFTY
+    "260650101190001": null, // SENSEX
   });
 
   /* =======================
@@ -164,10 +164,10 @@ const Navbar: React.FC = () => {
   // }, []);
 
   // instrument 1
-  useSocket("tick_message_1_26000", (inner) => {
+  useSocket("tick_message_260000101190008", (inner) => {
     setMarketData((prev) => ({
       ...prev,
-      ["1_26000"]: {
+      ["260000101190008"]: {
         Price: inner.Price,
         ChangeValue: inner.ChangeValue,
         PercentChange: inner.PercentChange,
@@ -176,10 +176,10 @@ const Navbar: React.FC = () => {
   });
 
   // instrument 2
-  useSocket("tick_message_11_26065", (inner) => {
+  useSocket("tick_message_260650101190001", (inner) => {
     setMarketData((prev) => ({
       ...prev,
-      ["11_26065"]: {
+      ["260650101190001"]: {
         Price: inner.Price,
         ChangeValue: inner.ChangeValue,
         PercentChange: inner.PercentChange,
