@@ -21,7 +21,6 @@ import {
 } from "../services/watchlistApi";
 import { WatchlistItem } from "../components/WatchlistPanel";
 import socketService from "../services/socketService";
-import { useSocket } from "../hook/useSocket";
 
 const tabs = ["1", "2", "3", "4", "5"];
 
@@ -98,129 +97,102 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
     fetchWatchlist();
   }, [active]);
 
+  // useEffect(() => {
+  //   if (!isOpen || !watchlist.length) return;
+
+  //   const instrumentKeys = watchlist
+  //     .map((w) => w.instrumentKey)
+  //     .filter(Boolean);
+
+  //   instrumentKeys.forEach((inst) => {
+  //     const topic = `tick_message_${inst}`;
+
+  //     // socketService.subscribe(topic, (frame: any) => {
+  //     //   try {
+  //     //     const outer = JSON.parse(frame.body);
+  //     //     const inner = JSON.parse(outer.data);
+
+  //     //     setWatchlist((prev) =>
+  //     //       prev.map((w) =>
+  //     //         w.instrumentKey === inst
+  //     //           ? {
+  //     //               ...w,
+  //     //               last: inner.Price ?? w.last,
+  //     //               change: inner.PercentChange ?? w.change,
+  //     //               changeValue: inner.ChangeValue ?? w.changeValue,
+  //     //             }
+  //     //           : w,
+  //     //       ),
+  //     //     );
+  //     //   } catch (err) {
+  //     //     console.error("Socket parse error", err);
+  //     //   }
+  //     // });
+
+  //     socketService.subscribe(topic, (body: any) => {
+  //       const inner = JSON.parse(body.data);
+
+  //       setWatchlist((prev) =>
+  //         prev.map((w) =>
+  //           w.instrumentKey === inst
+  //             ? {
+  //                 ...w,
+  //                 last: inner.Price ?? w.last,
+  //                 change: inner.PercentChange ?? w.change,
+  //                 changeValue: inner.ChangeValue ?? w.changeValue,
+  //               }
+  //             : w,
+  //         ),
+  //       );
+  //     });
+  //   });
+
+  //   return () => {
+  //     instrumentKeys.forEach((inst) => {
+  //       socketService.unsubscribe(`tick_message_${inst}`);
+  //     });
+  //   };
+  // }, [
+  //   isOpen,
+  //   watchlist.map((w) => w.instrumentKey).join(","), // ✅ only keys
+  // ]);
 
   useEffect(() => {
     if (!isOpen || !watchlist.length) return;
 
-    const instrumentKeys = watchlist
+    const instruments = watchlist
       .map((w) => w.instrumentKey)
-      .filter(Boolean);
+      .filter((key): key is string => Boolean(key));
 
-    instrumentKeys.forEach((inst) => {
+    const newInstruments = instruments.filter(
+      (inst) => !subscribedRef.current.includes(inst),
+    );
+
+    if (!newInstruments.length) return;
+
+    newInstruments.forEach((inst) => {
       const topic = `tick_message_${inst}`;
 
-      socketService.subscribe(topic, (frame: any) => {
-        try {
-          const outer = JSON.parse(frame.body);
-          const inner = JSON.parse(outer.data);
+      socketService.subscribe(topic, (body: any) => {
+        const inner = JSON.parse(body.data);
 
-          setWatchlist((prev) =>
-            prev.map((w) =>
-              w.instrumentKey === inst
-                ? {
+        setWatchlist((prev) =>
+          prev.map((w) =>
+            w.instrumentKey === inst
+              ? {
                   ...w,
                   last: inner.Price ?? w.last,
                   change: inner.PercentChange ?? w.change,
                   changeValue: inner.ChangeValue ?? w.changeValue,
                 }
-                : w
-            )
-          );
-        } catch (err) {
-          console.error("Socket parse error", err);
-        }
-      });
-    });
-
-    return () => {
-      instrumentKeys.forEach((inst) => {
-        socketService.unsubscribe(`tick_message_${inst}`);
-      });
-    };
-  }, [
-    isOpen,
-    watchlist.map((w) => w.instrumentKey).join(","), // ✅ only keys
-  ]);
-
-  // useEffect(() => {
-  //   if (!watchlist.length) return;
-
-  //   // socketService.connect();
-
-  //   const instruments = watchlist
-  //     .map((w: any) => w.instrumentKey)
-  //     .filter(Boolean);
-
-  //   // ✅ prevent resubscribe loop
-  //   const newInstruments = instruments.filter(
-  //     (inst) => !subscribedRef.current.includes(inst),
-  //   );
-
-  //   if (!newInstruments.length) return;
-
-  //   newInstruments.forEach((inst: string) => {
-  //     socketService.subscribe(`tick_message_${inst}`, (frame: any) => {
-  //       try {
-  //         const outer = JSON.parse(frame.body);
-  //         const inner = JSON.parse(outer.data);
-
-  //         setWatchlist((prev) =>
-  //           prev.map((item: any) =>
-  //             item.instrumentKey === inst
-  //               ? {
-  //                   ...item,
-  //                   last: inner.Price ?? item.last,
-  //                   change: inner.PercentChange ?? item.change,
-  //                   changeValue: inner.ChangeValue ?? item.changeValue,
-  //                 }
-  //               : item,
-  //           ),
-  //         );
-  //       } catch (err) {
-  //         console.error("Socket parse error", err);
-  //       }
-  //     });
-  //   });
-
-  //   subscribedRef.current = [...subscribedRef.current, ...newInstruments];
-
-  //   return () => {
-  //     newInstruments.forEach((inst: string) => {
-  //       socketService.unsubscribe(`tick_message_${inst}`);
-  //     });
-
-  //     subscribedRef.current = [];
-  //   };
-  // }, [watchlist.length]);
-
-  useEffect(() => {
-    watchlist.forEach((item) => {
-      if (!item.instrumentKey) return;
-
-      const topic = `tick_message_${item.instrumentKey}`;
-
-      const handler = (inner: any) => {
-        setWatchlist((prev) =>
-          prev.map((w) =>
-            w.instrumentKey === item.instrumentKey
-              ? {
-                ...w,
-                last: inner.Price ?? w.last,
-                change: inner.PercentChange ?? w.change,
-                changeValue: inner.ChangeValue ?? w.changeValue,
-              }
               : w,
           ),
         );
-      };
-
-      socketService.subscribe(topic, handler);
-
-      return () => {
-        socketService.unsubscribe(topic, handler);
-      };
+      });
     });
-  }, [watchlist]);
+
+    subscribedRef.current = [...subscribedRef.current, ...newInstruments];
+  }, [watchlist.length]);
 
   const fetchSearch = async (query: string, page = 1) => {
     try {
@@ -485,8 +457,9 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                 >
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-[2px] h-3 ${s.change >= 0 ? "bg-emerald-500" : "bg-rose-500"
-                        }`}
+                      className={`w-[2px] h-3 ${
+                        s.change >= 0 ? "bg-emerald-500" : "bg-rose-500"
+                      }`}
                     />
 
                     <div className="text-[13px] font-medium text-neutral-700">
@@ -505,8 +478,9 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                     >
                       {/* LTP */}
                       <div
-                        className={`w-[85px] text-right font-medium ${s.change >= 0 ? "text-emerald-500" : "text-rose-500"
-                          }`}
+                        className={`w-[85px] text-right font-medium ${
+                          s.change >= 0 ? "text-emerald-500" : "text-rose-500"
+                        }`}
                       >
                         {s.last.toLocaleString("en-IN", {
                           minimumFractionDigits: 2,
@@ -697,10 +671,11 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
               <button
                 key={t}
                 onClick={() => setActive(t)}
-                className={`flex-1 py-3 text-xs font-semibold relative ${active === t
-                  ? "text-orange-600"
-                  : "text-neutral-500 hover:bg-neutral-50"
-                  }`}
+                className={`flex-1 py-3 text-xs font-semibold relative ${
+                  active === t
+                    ? "text-orange-600"
+                    : "text-neutral-500 hover:bg-neutral-50"
+                }`}
               >
                 {t}
 
