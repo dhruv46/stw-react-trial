@@ -74,7 +74,7 @@ interface ExecutionLeg {
   stoplossLevel?: number;
 
   side: "BUY" | "SELL";
-  optionType: "CE" | "PE" | "FUT";
+  optionType: "CE" | "PE" | "FUT" | "EQ";
 
   lots: number;
   qty: number;
@@ -261,6 +261,13 @@ const ManualExecution: React.FC = () => {
 
   const handleInstrumentSelect = async (instrumentId: number) => {
     try {
+      // ✅ reset dependent fields when instrument changes
+      setSelectedUnderlying(null);
+      setSelectedExpiry(null);
+      setExpiryOptions([]);
+      setStrikePrices([]);
+      setLegs([]);
+
       setBaseInstrumentId(instrumentId);
       setTradeInstrumentId(instrumentId);
       setSelectedInstrument(instrumentId);
@@ -339,6 +346,13 @@ const ManualExecution: React.FC = () => {
       }));
     },
   );
+  const getCurrentPrice = () => {
+    if (selectedInstrument && instrumenttik[selectedInstrument]?.Price) {
+      return instrumenttik[selectedInstrument].Price;
+    }
+
+    return instrumentMeta?.ltp || 0;
+  };
 
   // const handleUnderlyingChange = async (value: string) => {
   //   setSelectedUnderlying(value);
@@ -527,7 +541,20 @@ const ManualExecution: React.FC = () => {
       await fetchStrikePrices(selectedInstrument!, defaultExpiry);
     }
 
-    message.success("Leg added successfully");
+    // 🔥 CALL SUBSCRIPTION API
+    try {
+      const price = getCurrentPrice();
+
+      await getInstrumentSubscription(
+        tradeInstrumentId!, // important
+        price,
+        defaultExpiry || "",
+        "CE",
+        "ATM",
+      );
+    } catch (err) {
+      console.error("Subscription API error", err);
+    }
   };
 
   const removeLeg = (id: string) => {
@@ -554,21 +581,71 @@ const ManualExecution: React.FC = () => {
     }
   };
   const updateLegExpiry = async (id: string, expiry: string) => {
+    const leg = legs.find((l) => l.id === id);
+    if (!leg) return;
+
     setLegs((prev) =>
-      prev.map((leg) => (leg.id === id ? { ...leg, expiry } : leg)),
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              expiry,
+            }
+          : l,
+      ),
     );
 
     await fetchStrikePrices(selectedInstrument!, expiry);
-  };
 
-  const updateStrike = (id: string, strike: number | string) => {
+    await callSubscriptionApi(leg.optionType, expiry, leg.strikePrice || "ATM");
+  };
+  const updateStrike = async (id: string, strike: number | string) => {
+    const leg = legs.find((l) => l.id === id);
+    if (!leg) return;
+
     setLegs((prev) =>
-      prev.map((leg) =>
-        leg.id === id ? { ...leg, strikePrice: strike } : leg,
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              strikePrice: strike,
+            }
+          : l,
       ),
     );
+
+    if (leg.expiry) {
+      await callSubscriptionApi(leg.optionType, leg.expiry, strike);
+    }
   };
 
+  const callSubscriptionApi = async (
+    optionType: "CE" | "PE" | "FUT" | "EQ",
+    expiry: string,
+    strike: string | number,
+  ) => {
+    try {
+      const price =
+        selectedInstrument && instrumenttik[selectedInstrument]?.Price
+          ? instrumenttik[selectedInstrument].Price
+          : instrumentMeta?.ltp || 0;
+
+      const atmShift =
+        typeof strike === "string" && strike.startsWith("ATM")
+          ? strike
+          : String(strike);
+
+      await getInstrumentSubscription(
+        tradeInstrumentId!,
+        price,
+        expiry,
+        optionType,
+        atmShift,
+      );
+    } catch (error) {
+      console.error("Subscription API error", error);
+    }
+  };
   const columns: ColumnsType<ManualExecutionRow> = [
     {
       title: "ID",
@@ -706,41 +783,80 @@ const ManualExecution: React.FC = () => {
       ),
     );
   };
-  const toggleOptionType = (id: string) => {
+  // const toggleOptionType = async (id: string) => {
+  //   const leg = legs.find((l) => l.id === id);
+  //   if (!leg) return;
+
+  //   const next =
+  //     leg.optionType === "CE" ? "PE" : leg.optionType === "PE" ? "FUT" : "CE";
+
+  //   const expiryList = next === "FUT" ? futureExpiry : spotExpiry;
+  //   const newExpiry = expiryList?.[0];
+
+  //   setLegs((prev) =>
+  //     prev.map((l) =>
+  //       l.id === id
+  //         ? {
+  //             ...l,
+  //             optionType: next,
+  //             expiry: newExpiry,
+  //           }
+  //         : l,
+  //     ),
+  //   );
+
+  //   if (newExpiry) {
+  //     await fetchStrikePrices(selectedInstrument!, newExpiry);
+
+  //     await callSubscriptionApi(next, newExpiry, leg.strikePrice || "ATM");
+  //   }
+  // };
+
+  const toggleOptionType = async (id: string) => {
+    const leg = legs.find((l) => l.id === id);
+    if (!leg || !instrumentMeta) return;
+
+    const types =
+      instrumentMeta.series === "EQ"
+        ? ["EQ", "CE", "PE", "FUT"]
+        : ["CE", "PE", "FUT"];
+
+    const currentIndex = types.indexOf(leg.optionType);
+    const next = types[(currentIndex + 1) % types.length] as
+      | "CE"
+      | "PE"
+      | "FUT"
+      | "EQ";
+
+    const expiryList = next === "FUT" ? futureExpiry : spotExpiry;
+    const newExpiry = next === "EQ" ? undefined : expiryList?.[0];
+
     setLegs((prev) =>
-      prev.map((leg) => {
-        if (leg.id !== id) return leg;
-
-        const next =
-          leg.optionType === "CE"
-            ? "PE"
-            : leg.optionType === "PE"
-              ? "FUT"
-              : "CE";
-
-        const expiryList = next === "FUT" ? futureExpiry : spotExpiry;
-
-        const newExpiry = expiryList?.[0] || undefined;
-
-        if (newExpiry) {
-          fetchStrikePrices(selectedInstrument!, newExpiry);
-        }
-
-        return {
-          ...leg,
-          optionType: next,
-          expiry: newExpiry,
-          // strikePrice: undefined,
-        };
-      }),
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              optionType: next,
+              expiry: newExpiry,
+              strikePrice: next === "EQ" ? undefined : l.strikePrice,
+              qty: next === "EQ" ? 1 : l.qty,
+            }
+          : l,
+      ),
     );
+
+    if (next !== "EQ" && newExpiry) {
+      await fetchStrikePrices(selectedInstrument!, newExpiry);
+      await callSubscriptionApi(next, newExpiry, leg.strikePrice || "ATM");
+    }
   };
+
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
         size="small"
         className="flex-1 rounded-md border shadow-sm flex flex-col"
-        bodyStyle={{ padding: 0, display: "flex", flexDirection: "column" }}
+        style={{ padding: 0, display: "flex", flexDirection: "column" }}
       >
         {/* Header */}
         <div className="px-2 py-1 border-b flex items-center justify-between bg-white rounded-t-md">
@@ -798,6 +914,7 @@ const ManualExecution: React.FC = () => {
                     placeholder="Underlying"
                     className="w-full text-[11px] h-6"
                     options={underlyingOptions}
+                    value={selectedUnderlying} // ✅ add this
                     onChange={handleUnderlyingChange}
                   />
                 </Col>
@@ -971,11 +1088,44 @@ const ManualExecution: React.FC = () => {
                       </div>
 
                       {/* lots */}
-                      <div className="flex flex-col items-center bg-gray-200 px-3 py-[2px] rounded border">
+                      <div className="flex flex-col items-center bg-gray-200 px-2 py-[2px] rounded border">
                         <span className="text-[9px] text-gray-500 leading-none">
                           lots
                         </span>
-                        <span className="text-[11px] font-medium">1</span>
+
+                        <InputNumber
+                          size="small"
+                          min={1}
+                          value={leg.lots}
+                          disabled={leg.optionType === "EQ"}
+                          className="w-[50px] text-[11px]"
+                          controls={false}
+                          onChange={(val) => {
+                            const newLots = val || 1;
+
+                            setLegs((prev) =>
+                              prev.map((l) =>
+                                l.id === leg.id
+                                  ? {
+                                      ...l,
+                                      lots: newLots,
+                                      qty:
+                                        l.optionType === "EQ"
+                                          ? 1
+                                          : newLots *
+                                            (selectedUnderlying === "future"
+                                              ? Number(
+                                                  instrumentMeta?.future_lotsize,
+                                                )
+                                              : Number(
+                                                  instrumentMeta?.option_lotsize,
+                                                )),
+                                    }
+                                  : l,
+                              ),
+                            );
+                          }}
+                        />
                       </div>
 
                       {/* qty */}
@@ -984,8 +1134,7 @@ const ManualExecution: React.FC = () => {
                           Qty
                         </span>
                         <span className="text-[11px] font-medium">
-                          {" "}
-                          {leg.qty}
+                          {leg.optionType === "EQ" ? 1 : leg.qty}
                         </span>
                       </div>
 
@@ -995,6 +1144,7 @@ const ManualExecution: React.FC = () => {
                         className="w-[120px]"
                         value={leg.expiry}
                         placeholder="Expiry"
+                        disabled={leg.optionType === "EQ"}
                         onChange={(val) => updateLegExpiry(leg.id, val)}
                         options={
                           leg.optionType === "FUT"
@@ -1004,33 +1154,31 @@ const ManualExecution: React.FC = () => {
                       />
 
                       {/* Strike */}
-                      {leg.optionType !== "FUT" ? (
-                        <Select
-                          size="small"
-                          className="w-[90px]"
-                          placeholder="Strike"
-                          value={leg.strikePrice}
-                          onChange={(val) => updateStrike(leg.id, val)}
-                          options={[
-                            // Extra ATM offset values from the image
-                            { label: "ATM-2", value: "ATM-2" },
-                            { label: "ATM-1", value: "ATM-1" },
-                            { label: "ATM", value: "ATM" },
-                            { label: "ATM+1", value: "ATM+1" },
-                            { label: "ATM+2", value: "ATM+2" },
 
-                            // Your existing dynamic strike prices
-                            ...strikePrices.map((s) => ({
-                              label: s.toString(),
-                              value: s,
-                            })),
-                          ]}
-                        />
-                      ) : (
-                        <div className="w-[90px] text-center text-gray-400 text-[11px]">
-                          {/* Empty for Future */}
-                        </div>
-                      )}
+                      <Select
+                        size="small"
+                        className="w-[90px]"
+                        placeholder="Strike"
+                        value={leg.strikePrice}
+                        disabled={
+                          leg.optionType === "FUT" || leg.optionType === "EQ"
+                        }
+                        onChange={(val) => updateStrike(leg.id, val)}
+                        options={[
+                          // Extra ATM offset values from the image
+                          { label: "ATM-2", value: "ATM-2" },
+                          { label: "ATM-1", value: "ATM-1" },
+                          { label: "ATM", value: "ATM" },
+                          { label: "ATM+1", value: "ATM+1" },
+                          { label: "ATM+2", value: "ATM+2" },
+
+                          // Your existing dynamic strike prices
+                          ...strikePrices.map((s) => ({
+                            label: s.toString(),
+                            value: s,
+                          })),
+                        ]}
+                      />
 
                       {/* delete */}
                       <MdDelete
