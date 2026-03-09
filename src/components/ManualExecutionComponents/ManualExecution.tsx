@@ -708,11 +708,12 @@ const ManualExecution: React.FC = () => {
       dataIndex: "status",
       width: 60,
       align: "center",
-      render: (status: boolean) => (
+      render: (status: boolean, record) => (
         <Switch
           checked={status}
           size="small"
           className={status ? "bg-blue-600" : "bg-gray-300"}
+          onChange={(checked) => handleToggleStatus(record.id, checked)}
         />
       ),
     },
@@ -774,6 +775,13 @@ const ManualExecution: React.FC = () => {
   const currentTick =
     showTicker && selectedInstrument ? instrumenttik[selectedInstrument] : null;
 
+  const handleToggleStatus = (id: number, checked: boolean) => {
+    setData((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, status: checked } : item,
+      ),
+    );
+  };
   const toggleSide = (id: string) => {
     setLegs((prev) =>
       prev.map((leg) =>
