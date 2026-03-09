@@ -1059,137 +1059,151 @@ const ManualExecution: React.FC = () => {
               </div>
 
               {legs.length > 0 && (
-                <div className="mt-3 space-y-2 max-h-90 overflow-y-auto">
+                <div className="mt-4 flex flex-col gap-1.5 max-h-90 overflow-y-auto pr-1">
                   {legs.map((leg) => (
                     <div
                       key={leg.id}
-                      className="flex items-center gap-5 bg-gray-100 rounded-xl px-3 py-2 border"
+                      className="flex items-center gap-2 bg-white border border-slate-200 hover:border-blue-400 rounded-lg px-2 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all group"
                     >
-                      {/* BUY / SELL */}
-                      <button
-                        onClick={() => toggleSide(leg.id)}
-                        className={`w-[56px] h-6 flex items-center justify-center text-[11px] font-bold rounded-md border transition
-    ${
-      leg.side === "BUY"
-        ? "bg-green-100 text-green-700 border-green-300 hover:bg-green-200"
-        : "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
-    }`}
-                      >
-                        {leg.side}
-                      </button>
-
-                      {/* CE / PE / FUT */}
-                      <button
-                        onClick={() => toggleOptionType(leg.id)}
-                        className="w-[48px] h-6 flex items-center justify-center text-[11px] font-bold rounded-md border border-blue-300 bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
-                      >
-                        {leg.optionType}
-                      </button>
-
-                      {/* strike */}
-                      <div className="bg-gray-200 text-gray-600 text-[11px] px-3 py-[2px] rounded border min-w-[40px] text-center">
-                        --
+                      {/* 1. SIDE (BUY/SELL) - Compact Pill */}
+                      <div className="w-[54px] flex-shrink-0">
+                        <button
+                          onClick={() => toggleSide(leg.id)}
+                          className={`w-full h-7 flex items-center justify-center text-[10px] font-black rounded border transition-all active:scale-90 ${
+                            leg.side === "BUY"
+                              ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                              : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                          }`}
+                        >
+                          {leg.side}
+                        </button>
                       </div>
 
-                      {/* lots */}
-                      <div className="flex flex-col items-center bg-gray-200 px-2 py-[2px] rounded border">
-                        <span className="text-[9px] text-gray-500 leading-none">
-                          lots
+                      {/* 2. TYPE (CE/PE/FUT) - Modern Minimalist */}
+                      <div className="w-[48px] flex-shrink-0">
+                        <button
+                          onClick={() => toggleOptionType(leg.id)}
+                          className="w-full h-7 flex items-center justify-center text-[10px] font-bold rounded border border-blue-100 bg-slate-50 text-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                        >
+                          {leg.optionType}
+                        </button>
+                      </div>
+
+                      {/* 3. STRIKE PLACEHOLDER (--) */}
+                      <div className="w-[28px] flex-shrink-0 flex justify-center">
+                        <span className="text-slate-300 text-[10px] font-mono tracking-tighter">
+                          --
                         </span>
+                      </div>
 
-                        <InputNumber
+                      {/* 4. LOTS & 5. QTY (Combined Module) */}
+                      <div className="flex items-center bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-[7px] text-slate-400 font-bold uppercase leading-none mb-0.5">
+                            Lots
+                          </span>
+                          <InputNumber
+                            size="small"
+                            variant="borderless"
+                            min={1}
+                            value={leg.lots}
+                            // disabled={leg.optionType === "EQ"}
+                            className="w-[40px] h-4 text-[11px] font-bold p-0"
+                            controls={false}
+                            onChange={(val) => {
+                              const newLots = val || 1;
+                              setLegs((prev) =>
+                                prev.map((l) =>
+                                  l.id === leg.id
+                                    ? {
+                                        ...l,
+                                        lots: newLots,
+                                        qty:
+                                          l.optionType === "EQ"
+                                            ? 1
+                                            : newLots *
+                                              (selectedUnderlying === "future"
+                                                ? Number(
+                                                    instrumentMeta?.future_lotsize,
+                                                  )
+                                                : Number(
+                                                    instrumentMeta?.option_lotsize,
+                                                  )),
+                                      }
+                                    : l,
+                                ),
+                              );
+                            }}
+                          />
+                        </div>
+                        <div className="w-[1px] h-6 bg-slate-200/60" />{" "}
+                        {/* Divider */}
+                        <div className="flex flex-col items-center min-w-[30px]">
+                          <span className="text-[7px] text-slate-400 font-bold uppercase leading-none mb-0.5">
+                            Qty
+                          </span>
+                          <span className="text-[11px] font-bold text-slate-600 leading-none">
+                            {leg.optionType === "EQ" ? 1 : leg.qty}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 6. EXPIRY SELECT */}
+                      <div className="w-[110px] flex-shrink-0">
+                        <Select
                           size="small"
-                          min={1}
-                          value={leg.lots}
+                          variant="borderless"
+                          className="w-full bg-slate-50 rounded text-[11px] hover:bg-slate-100 transition-colors"
+                          value={leg.expiry}
+                          placeholder="Expiry"
                           disabled={leg.optionType === "EQ"}
-                          className="w-[50px] text-[11px]"
-                          controls={false}
-                          onChange={(val) => {
-                            const newLots = val || 1;
-
-                            setLegs((prev) =>
-                              prev.map((l) =>
-                                l.id === leg.id
-                                  ? {
-                                      ...l,
-                                      lots: newLots,
-                                      qty:
-                                        l.optionType === "EQ"
-                                          ? 1
-                                          : newLots *
-                                            (selectedUnderlying === "future"
-                                              ? Number(
-                                                  instrumentMeta?.future_lotsize,
-                                                )
-                                              : Number(
-                                                  instrumentMeta?.option_lotsize,
-                                                )),
-                                    }
-                                  : l,
-                              ),
-                            );
-                          }}
+                          onChange={(val) => updateLegExpiry(leg.id, val)}
+                          options={
+                            leg.optionType === "FUT"
+                              ? futureExpiry.map((d) => ({
+                                  label: d,
+                                  value: d,
+                                }))
+                              : spotExpiry.map((d) => ({ label: d, value: d }))
+                          }
                         />
                       </div>
 
-                      {/* qty */}
-                      <div className="flex flex-col items-center bg-gray-200 px-3 py-[2px] rounded border">
-                        <span className="text-[9px] text-gray-500 leading-none">
-                          Qty
-                        </span>
-                        <span className="text-[11px] font-medium">
-                          {leg.optionType === "EQ" ? 1 : leg.qty}
-                        </span>
+                      {/* 7. STRIKE PRICE SELECT */}
+                      <div className="w-[95px] flex-shrink-0">
+                        <Select
+                          size="small"
+                          variant="borderless"
+                          className="w-full bg-slate-50 rounded text-[11px] font-semibold text-blue-600 hover:bg-slate-100 transition-colors"
+                          placeholder="Strike"
+                          value={leg.strikePrice}
+                          disabled={
+                            leg.optionType === "FUT" || leg.optionType === "EQ"
+                          }
+                          onChange={(val) => updateStrike(leg.id, val)}
+                          options={[
+                            { label: "ATM-2", value: "ATM-2" },
+                            { label: "ATM-1", value: "ATM-1" },
+                            { label: "ATM", value: "ATM" },
+                            { label: "ATM+1", value: "ATM+1" },
+                            { label: "ATM+2", value: "ATM+2" },
+                            ...strikePrices.map((s) => ({
+                              label: s.toString(),
+                              value: s,
+                            })),
+                          ]}
+                        />
                       </div>
 
-                      {/* Expiry */}
-                      <Select
-                        size="small"
-                        className="w-[120px]"
-                        value={leg.expiry}
-                        placeholder="Expiry"
-                        disabled={leg.optionType === "EQ"}
-                        onChange={(val) => updateLegExpiry(leg.id, val)}
-                        options={
-                          leg.optionType === "FUT"
-                            ? futureExpiry.map((d) => ({ label: d, value: d }))
-                            : spotExpiry.map((d) => ({ label: d, value: d }))
-                        }
-                      />
-
-                      {/* Strike */}
-
-                      <Select
-                        size="small"
-                        className="w-[90px]"
-                        placeholder="Strike"
-                        value={leg.strikePrice}
-                        disabled={
-                          leg.optionType === "FUT" || leg.optionType === "EQ"
-                        }
-                        onChange={(val) => updateStrike(leg.id, val)}
-                        options={[
-                          // Extra ATM offset values from the image
-                          { label: "ATM-2", value: "ATM-2" },
-                          { label: "ATM-1", value: "ATM-1" },
-                          { label: "ATM", value: "ATM" },
-                          { label: "ATM+1", value: "ATM+1" },
-                          { label: "ATM+2", value: "ATM+2" },
-
-                          // Your existing dynamic strike prices
-                          ...strikePrices.map((s) => ({
-                            label: s.toString(),
-                            value: s,
-                          })),
-                        ]}
-                      />
-
-                      {/* delete */}
-                      <MdDelete
-                        className="text-red-600 cursor-pointer ml-auto hover:text-red-800"
-                        size={16}
-                        onClick={() => removeLeg(leg.id)}
-                      />
+                      {/* 8. DELETE (Now tucked inside the main flow) */}
+                      <div className="flex-shrink-0 border-l  pl-1 ml-1">
+                        <button
+                          onClick={() => removeLeg(leg.id)}
+                          className="p-1 text-red-400 hover:text-red-600 rounded transition-all"
+                        >
+                          <MdDelete size={16} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
