@@ -830,6 +830,10 @@ const ManualExecution: React.FC = () => {
 
     const expiryList = next === "FUT" ? futureExpiry : spotExpiry;
     const newExpiry = next === "EQ" ? undefined : expiryList?.[0];
+    const lotSize =
+      selectedUnderlying === "future"
+        ? Number(instrumentMeta?.future_lotsize)
+        : Number(instrumentMeta?.option_lotsize);
 
     setLegs((prev) =>
       prev.map((l) =>
@@ -839,7 +843,7 @@ const ManualExecution: React.FC = () => {
               optionType: next,
               expiry: newExpiry,
               strikePrice: next === "EQ" ? undefined : l.strikePrice,
-              qty: next === "EQ" ? 1 : l.qty,
+              qty: next === "EQ" ? 1 : l.lots * lotSize,
             }
           : l,
       ),
