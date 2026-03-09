@@ -35,7 +35,7 @@ const nav: NavItem[] = [
       { to: "/sim-trade-book", label: "Sim Trade Book" },
     ],
   },
-  { to: "javascript:void(0)", label: "Manual Execution" },
+  { to: "/manual-execution", label: "Manual Execution" },
   {
     label: "Positions",
     children: [

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import {
   ChevronDown,
   ChevronUp,
@@ -30,6 +30,7 @@ interface LeftRailProps {
 }
 
 export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
+  const location = useLocation(); // ✅ get current path
   const [searchParams, setSearchParams] = useSearchParams();
   const [active, setActive] = useState("1");
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
@@ -224,6 +225,11 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
     window.addEventListener("click", close);
     return () => window.removeEventListener("click", close);
   }, []);
+
+  // ✅ hide component if URL contains "manual-execution"
+  if (location.pathname.includes("manual-execution")) {
+    return null;
+  }
 
   return (
     <aside
