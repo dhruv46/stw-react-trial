@@ -38,11 +38,14 @@ import {
   getInstrumentSubscription,
   getFutureInstrument,
   postManualExecution,
+  getManualExecutionsById,
+  getManualStrategyByClientId,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
 import { useSocket } from "../../hook/useSocket";
 import socketService from "../../services/socketService";
+import { getMeApi } from "../../services/authApi";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -136,6 +139,8 @@ const ManualExecution: React.FC = () => {
   const [displayInstrumentName, setDisplayInstrumentName] =
     useState<string>("");
   const [enabled, setEnabled] = useState<boolean>(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const fetchExecutions = async () => {
     try {
@@ -187,11 +192,15 @@ const ManualExecution: React.FC = () => {
 
   const fetchTagOptions = async () => {
     try {
-      const clientRes = await getEnabledClientList();
+      const fetchMe = await getMeApi();
+      const clientId = fetchMe.data.user_clients?.[0];
+
+      const clientRes = await getManualStrategyByClientId(clientId);
+
       const strategyRes = await FetchStrategyList();
 
       const clientStrategies: number[] =
-        clientRes.data.result?.flatMap((c: any) => c.strategy) || [];
+        clientRes.data.result?.flatMap((c: any) => c.strategy_id) || [];
 
       const strategyList = strategyRes.data.result || [];
 
@@ -200,7 +209,7 @@ const ManualExecution: React.FC = () => {
       );
 
       const options = filteredStrategies.map((s: any) => ({
-        label: s.name,
+        label: `${s.id} : ${s.name}`,
         value: s.id,
       }));
 
@@ -241,7 +250,7 @@ const ManualExecution: React.FC = () => {
       setLegs([]);
 
       setBaseInstrumentId(instrumentId);
-      setTradeInstrumentId(instrumentId);
+
       setSelectedInstrument(instrumentId);
 
       const res = await getSpotFutureUnderlying(instrumentId.toString());
@@ -734,6 +743,7 @@ const ManualExecution: React.FC = () => {
                 <FiEdit2
                   key="edit"
                   className="text-orange-500 text-sm cursor-pointer"
+                  onClick={() => handleEditExecution(record.id)}
                 />,
                 <IoPlaySharp
                   key="play"
@@ -817,7 +827,7 @@ const ManualExecution: React.FC = () => {
               optionType: next,
               expiry: newExpiry,
               strikePrice: next === "EQ" ? undefined : l.strikePrice,
-              qty: next === "EQ" ? 1 : l.lots * lotSize,
+              qty: next === "EQ" ? 1 : lotSize,
             }
           : l,
       ),
@@ -907,6 +917,221 @@ const ManualExecution: React.FC = () => {
       );
     }
   };
+
+  const handleEditExecution = async (id: number) => {
+    try {
+      const res = await getManualExecutionsById(id);
+      const exec = res.data.result.manual_execution[0];
+      const legsData = res.data.result.portfolio_legs || [];
+
+      setIsAdding(true);
+      setIsEditMode(true);
+      setEditingId(exec.id);
+
+      await fetchTagOptions();
+
+      const instrumentId = Number(exec.instrument);
+      const futureInstrumentId = Number(exec.underlying_instrument_id);
+      const underlying = exec.underlying_instrument.toLowerCase();
+
+      // 1. Set pure scalar states immediately
+      setStrategyName(exec.strategy_name);
+      setSelectedTag(exec.strategy_id);
+      setEntryLevel(exec.entry_level);
+      setStoplossLevel(exec.stoploss_level);
+      setTradeType(
+        exec.product_type === "positional" ? "positional" : "intraday",
+      );
+      setStartTime(dayjs(exec.entry_time, "HH:mm:ss"));
+      setEndTime(dayjs(exec.squareoff_time, "HH:mm:ss"));
+      setEnabled(exec.enabled);
+      setDisplayInstrumentName(exec.instrument_name);
+      setBaseInstrumentId(instrumentId);
+      setSelectedInstrument(instrumentId);
+
+      setStockOptions([
+        {
+          label: exec.instrument_name,
+          value: instrumentId as any,
+        },
+      ]);
+
+      // Set default ticker data
+      setInstrumenttik((prev: any) => ({
+        ...prev,
+        [instrumentId]: {
+          Price: exec.ltp,
+          ChangeValue: exec.ChangeValue,
+          PercentChange: exec.PercentChange,
+        },
+      }));
+
+      // 2. Fetch Metadata sequentially to avoid state race conditions
+      const metaRes = await getSpotFutureUnderlying(instrumentId.toString());
+      const metaResult = metaRes.data.result;
+
+      setInstrumentMeta(metaResult);
+      setSpotExpiry(metaResult.spot_expiry || []);
+      setFutureExpiry(metaResult.future_expiry || []);
+
+      const types = metaResult.underlying_instrument_type || [];
+      let uOptions;
+      if (metaResult.series === "FUTCOM") {
+        uOptions = [{ label: "FUTURE", value: "future" }];
+      } else {
+        uOptions = types.map((type: string) => ({
+          label: type.toUpperCase(),
+          value: type,
+        }));
+      }
+      setUnderlyingOptions(uOptions);
+      setSelectedUnderlying(underlying);
+
+      // 3. Resolve underlying specific details (Expiry & TradeInstrumentId)
+      let currentTradeInstId = instrumentId;
+
+      if (underlying === "spot") {
+        setTradeInstrumentId(instrumentId);
+        setSelectedExpiry(null);
+        setExpiryOptions([]);
+      } else if (underlying === "future") {
+        if (metaResult.series === "FUTCOM") {
+          const baseExpiry = metaResult.base_expiry;
+          setExpiryOptions([{ label: baseExpiry, value: baseExpiry }]);
+          setSelectedExpiry(baseExpiry);
+          currentTradeInstId = futureInstrumentId;
+          setTradeInstrumentId(futureInstrumentId);
+        } else {
+          const expRes = await getInstrumentExpiryDate(
+            instrumentId.toString(),
+            underlying.toUpperCase(),
+          );
+          const dates = expRes.data.result?.expiry_date || [];
+          setExpiryOptions(
+            dates.map((date: string) => ({ label: date, value: date })),
+          );
+
+          if (dates.length > 0) {
+            // Find matched expiry from API response or fallback to first option
+            let matchedExpiry = dates[0];
+            if (exec.expiry_date) {
+              const targetExp = dayjs(exec.expiry_date);
+              const found = dates.find((d: string) =>
+                dayjs(d).isSame(targetExp, "day"),
+              );
+              if (found) matchedExpiry = found;
+            }
+            setSelectedExpiry(matchedExpiry);
+          }
+          currentTradeInstId = futureInstrumentId;
+          setTradeInstrumentId(futureInstrumentId);
+        }
+      }
+
+      // 4. Map Legs, Populate Dropdowns, and Connect Sockets
+      const newLegInstrumentMap: Record<string, string> = {};
+      const newSubscribedInstruments: string[] = [];
+
+      const mappedLegs = await Promise.all(
+        legsData.map(async (leg: any) => {
+          const legId = String(leg.id);
+          let legExpiry = undefined;
+
+          // Parse Expiry Date correctly
+          if (leg.expiry_date) {
+            const availableExpiries =
+              leg.instrument_type === "FUT"
+                ? metaResult.future_expiry || []
+                : metaResult.spot_expiry || [];
+
+            const targetDate = dayjs(leg.expiry_date);
+            legExpiry = availableExpiries.find((e: string) =>
+              dayjs(e).isSame(targetDate, "day"),
+            );
+
+            if (!legExpiry) {
+              legExpiry = targetDate.format("DD-MMM-YYYY").toUpperCase(); // Fallback
+            }
+
+            // Fetch strike prices for this leg's expiry so the dropdown populates
+            if (leg.instrument_type !== "EQ" && leg.instrument_type !== "FUT") {
+              const series =
+                underlying === "future"
+                  ? metaResult.series
+                  : metaResult.option_series || metaResult.series;
+
+              try {
+                const spRes = await getInstrumentStrikePriceList(
+                  instrumentId,
+                  series,
+                  legExpiry,
+                );
+                setStrikePrices(spRes.data.result?.strike_price_list || []);
+              } catch (err) {
+                console.error("Strike API error during edit", err);
+              }
+            }
+          }
+
+          // Fetch tick subscription for the leg
+          if (leg.instrument_type !== "EQ" && legExpiry) {
+            try {
+              const atmShift =
+                typeof leg.strike_selection === "string" &&
+                leg.strike_selection.startsWith("ATM")
+                  ? leg.strike_selection
+                  : String(leg.strike_selection);
+
+              const price = exec.ltp || metaResult.ltp || 0;
+
+              const subRes = await getInstrumentSubscription(
+                currentTradeInstId,
+                price,
+                legExpiry,
+                leg.instrument_type,
+                atmShift,
+              );
+
+              const inst = subRes.data?.subscribed_instruments?.[0];
+              if (inst) {
+                newSubscribedInstruments.push(inst);
+                newLegInstrumentMap[legId] = inst;
+              }
+            } catch (error) {
+              console.error("Subscription API error during edit", error);
+            }
+          }
+
+          return {
+            id: legId,
+            strategyName: exec.strategy_name,
+            instrumentId: instrumentId,
+            instrumentName: exec.instrument_name,
+            underlying: underlying,
+            expiry: legExpiry,
+            strikePrice: leg.strike_selection,
+            entryLevel: exec.entry_level,
+            stoplossLevel: exec.stoploss_level,
+            side: leg.signal,
+            optionType: leg.instrument_type,
+            lots: Number(leg.lots),
+            qty: Number(leg.quantity),
+          };
+        }),
+      );
+
+      // 5. Finalize states
+      setLegs(mappedLegs);
+      setLegInstrumentMap((prev) => ({ ...prev, ...newLegInstrumentMap }));
+      setSubscribedInstruments((prev) => {
+        const unique = new Set([...prev, ...newSubscribedInstruments]);
+        return Array.from(unique);
+      });
+    } catch (error) {
+      console.error("Edit fetch failed", error);
+      message.error("Failed to load execution data");
+    }
+  };
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
@@ -949,6 +1174,7 @@ const ManualExecution: React.FC = () => {
                   <Select
                     placeholder="Tag"
                     className="w-full text-[11px] h-6"
+                    value={selectedTag || null}
                     options={tagOptions}
                     onChange={(val) => setSelectedTag(val)}
                   />
@@ -960,6 +1186,7 @@ const ManualExecution: React.FC = () => {
                     className="w-full text-[11px]"
                     style={{ height: 24 }}
                     filterOption={false}
+                    value={selectedInstrument}
                     onSelect={handleInstrumentSelect} // ✅ call API here
                     onSearch={handleStockSearch}
                     options={stockOptions}
@@ -1195,14 +1422,13 @@ const ManualExecution: React.FC = () => {
                                         qty:
                                           l.optionType === "EQ"
                                             ? 1
-                                            : newLots *
-                                              (selectedUnderlying === "future"
-                                                ? Number(
-                                                    instrumentMeta?.future_lotsize,
-                                                  )
-                                                : Number(
-                                                    instrumentMeta?.option_lotsize,
-                                                  )),
+                                            : selectedUnderlying === "future"
+                                              ? Number(
+                                                  instrumentMeta?.future_lotsize,
+                                                )
+                                              : Number(
+                                                  instrumentMeta?.option_lotsize,
+                                                ),
                                       }
                                     : l,
                                 ),
@@ -1227,7 +1453,7 @@ const ManualExecution: React.FC = () => {
                         <Select
                           size="small"
                           variant="borderless"
-                          className="w-full bg-slate-50 rounded text-[11px] hover:bg-slate-100 transition-colors"
+                          className="w-full bg-slate-50 rounded text-[13px] hover:bg-slate-100 transition-colors py-1"
                           value={leg.expiry}
                           placeholder="Expiry"
                           disabled={leg.optionType === "EQ"}
@@ -1248,7 +1474,7 @@ const ManualExecution: React.FC = () => {
                         <Select
                           size="small"
                           variant="borderless"
-                          className="w-full bg-slate-50 rounded text-[11px] font-semibold text-blue-600 hover:bg-slate-100 transition-colors"
+                          className="w-full bg-slate-50 rounded text-[13px] font-semibold text-blue-600 hover:bg-slate-100 transition-colors py-1"
                           placeholder="Strike"
                           value={leg.strikePrice}
                           disabled={
@@ -1292,7 +1518,11 @@ const ManualExecution: React.FC = () => {
                 </Button>
                 <Button
                   className="px-4 h-7 text-red-600 border font-semibold"
-                  onClick={() => setIsAdding(false)}
+                  onClick={() => {
+                    setIsAdding(false);
+                    setIsEditMode(false);
+                    setEditingId(null);
+                  }}
                 >
                   Back
                 </Button>
