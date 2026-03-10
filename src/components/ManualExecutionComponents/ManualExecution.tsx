@@ -295,7 +295,7 @@ const ManualExecution: React.FC = () => {
 
       // set instrument ids
       setTradeInstrumentId(futureInstrumentId);
-      setSelectedInstrument(futureInstrumentId);
+      // setSelectedInstrument(futureInstrumentId);
       setDisplayInstrumentName(futureData.instrument_name);
 
       // ✅ store API LTP as default tick
@@ -833,10 +833,10 @@ const ManualExecution: React.FC = () => {
     const payload = {
       id: 0,
       underlying_instrument: selectedUnderlying?.toUpperCase(),
-      underlying_instrument_id: baseInstrumentId,
+      underlying_instrument_id: String(tradeInstrumentId),
 
       product_type: tradeType,
-      instrument: tradeInstrumentId,
+      instrument: String(baseInstrumentId),
 
       strategy_name: strategyName,
       strategy_id: selectedTag,
@@ -844,7 +844,7 @@ const ManualExecution: React.FC = () => {
       entry_time: startTime.format("HH:mm:ss"),
       entry_level: entryLevel,
 
-      enabled: enabled, // ✅ from switch
+      enabled: enabled,
       reset: true,
       stoploss_level: stoplossLevel,
 
@@ -882,24 +882,31 @@ const ManualExecution: React.FC = () => {
     try {
       const payload = buildPayload();
 
-      await postManualExecution(payload);
+      const { data } = await postManualExecution(payload);
 
-      message.success("Manual Execution Created");
+      // If API sends error inside response
+      if (data?.error) {
+        message.error(data.error);
+        return;
+      }
+
+      // Success response
+      if (data?.result) {
+        message.success(data.result);
+      } else {
+        message.success("Success");
+      }
 
       setIsAdding(false);
       fetchExecutions();
     } catch (error: any) {
-      console.error(error);
-
-      const apiError =
+      message.error(
         error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        "Failed to create execution";
-
-      message.error(apiError);
+          error?.response?.data?.message ||
+          "Failed to create execution",
+      );
     }
   };
-
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card

@@ -72,3 +72,7 @@ export const getFutureInstrument = (
 export const postManualExecution = (payload: any) => {
   return API.post("/post_manual_execution", payload);
 };
+
+export const getManualExecutionsById = (id: number) => {
+  return API.get(`/get_manual_execution?manual_execution_id=${id}`);
+};

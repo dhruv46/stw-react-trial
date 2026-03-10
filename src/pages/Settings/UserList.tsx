@@ -294,7 +294,7 @@ export default function UserList() {
         // ✅ build payload correctly
         user_client_strategy: clientId
           ? {
-              [clientId]: [selectedStrategies],
+              [clientId]: selectedStrategies,
             }
           : {},
         hashed_password: values.password,
