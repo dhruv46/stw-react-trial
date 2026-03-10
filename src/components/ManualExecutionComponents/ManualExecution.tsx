@@ -37,6 +37,7 @@ import {
   getInstrumentStrikePriceList,
   getInstrumentSubscription,
   getFutureInstrument,
+  postManualExecution,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
@@ -134,6 +135,7 @@ const ManualExecution: React.FC = () => {
   const [legTicks, setLegTicks] = useState<Record<string, any>>({});
   const [displayInstrumentName, setDisplayInstrumentName] =
     useState<string>("");
+  const [enabled, setEnabled] = useState<boolean>(false);
 
   const fetchExecutions = async () => {
     try {
@@ -146,12 +148,19 @@ const ManualExecution: React.FC = () => {
         strategyTag: item.strategy_tag,
         instrument: item.instrument_name,
         underlying: item.underlying_instrument,
-        entryLevel: item.entry_level.toLocaleString("en-IN", {
-          minimumFractionDigits: 2,
-        }),
-        stoplossLevel: item.stoploss_level.toLocaleString("en-IN", {
-          minimumFractionDigits: 2,
-        }),
+        entryLevel:
+          item.entry_level != null
+            ? Number(item.entry_level).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+              })
+            : "-",
+
+        stoplossLevel:
+          item.stoploss_level != null
+            ? Number(item.stoploss_level).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+              })
+            : "-",
         status: item.enabled,
         actionType: item.is_position ? "pending" : "active",
         isRowHighlighted: item.is_position,
@@ -273,28 +282,6 @@ const ManualExecution: React.FC = () => {
       console.error(error);
     }
   };
-  // const fetchFutureInstrument = async (instrument: number, expiry: string) => {
-  //   try {
-  //     const res = await getFutureInstrument(instrument, expiry);
-
-  //     const futureInstrumentId = res.data?.result?.instrument_id;
-
-  //     if (futureInstrumentId) {
-  //       // subscribe to future
-  //       setTradeInstrumentId(futureInstrumentId);
-  //       setSelectedInstrument(futureInstrumentId);
-  //     } else {
-  //       // fallback to base instrument
-  //       setTradeInstrumentId(baseInstrumentId);
-  //       setSelectedInstrument(baseInstrumentId);
-  //     }
-  //   } catch (error) {
-  //     console.error("Future Instrument API error", error);
-
-  //     setTradeInstrumentId(baseInstrumentId);
-  //     setSelectedInstrument(baseInstrumentId);
-  //   }
-  // };
 
   const fetchFutureInstrument = async (instrument: number, expiry: string) => {
     try {
@@ -842,6 +829,77 @@ const ManualExecution: React.FC = () => {
     }
   };
 
+  const buildPayload = () => {
+    const payload = {
+      id: 0,
+      underlying_instrument: selectedUnderlying?.toUpperCase(),
+      underlying_instrument_id: baseInstrumentId,
+
+      product_type: tradeType,
+      instrument: tradeInstrumentId,
+
+      strategy_name: strategyName,
+      strategy_id: selectedTag,
+
+      entry_time: startTime.format("HH:mm:ss"),
+      entry_level: entryLevel,
+
+      enabled: enabled, // ✅ from switch
+      reset: true,
+      stoploss_level: stoplossLevel,
+
+      portfolio_leg: legs.map((leg) => ({
+        id: 0,
+        signal: leg.side,
+        instrument_type: leg.optionType,
+        strike_selection:
+          leg.optionType === "CE" || leg.optionType === "PE"
+            ? leg.strikePrice
+            : undefined,
+
+        expiry_date: leg.optionType !== "EQ" ? leg.expiry : undefined,
+
+        manual_execution_id: 0,
+        delete: false,
+        lots: String(leg.lots),
+        quantity: leg.qty,
+      })),
+
+      squareoff_time: endTime.format("HH:mm:ss"),
+
+      client_multiplier: {
+        1: {
+          multiplier: 1,
+          enabled: true,
+        },
+      },
+    };
+
+    return payload;
+  };
+
+  const handleSubmitExecution = async () => {
+    try {
+      const payload = buildPayload();
+
+      await postManualExecution(payload);
+
+      message.success("Manual Execution Created");
+
+      setIsAdding(false);
+      fetchExecutions();
+    } catch (error: any) {
+      console.error(error);
+
+      const apiError =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        "Failed to create execution";
+
+      message.error(apiError);
+    }
+  };
+
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
@@ -1003,7 +1061,11 @@ const ManualExecution: React.FC = () => {
                   </Button>
                 </Col>
                 <Col span={4} className="flex items-center gap-1">
-                  <Switch size="small" />
+                  <Switch
+                    size="small"
+                    checked={enabled}
+                    onChange={(checked) => setEnabled(checked)}
+                  />
                   <Text className="text-[10px] text-gray-500">Enabled</Text>
                 </Col>
               </Row>
@@ -1217,7 +1279,7 @@ const ManualExecution: React.FC = () => {
               <div className="flex justify-center gap-2 mt-4">
                 <Button
                   className="px-4 h-7 text-blue-600 border font-semibold"
-                  onClick={() => setIsAdding(false)}
+                  onClick={handleSubmitExecution}
                 >
                   Submit
                 </Button>

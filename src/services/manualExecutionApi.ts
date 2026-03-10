@@ -67,3 +67,8 @@ export const getFutureInstrument = (
     },
   });
 };
+
+// ✅ Create Manual Execution
+export const postManualExecution = (payload: any) => {
+  return API.post("/post_manual_execution", payload);
+};
