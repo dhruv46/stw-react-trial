@@ -41,6 +41,7 @@ import {
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
 import { useSocket } from "../../hook/useSocket";
+import socketService from "../../services/socketService";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -105,6 +106,7 @@ const ManualExecution: React.FC = () => {
   const [tradeType, setTradeType] = useState<"intraday" | "positional">(
     "intraday",
   );
+  const subscribedRef = React.useRef<string[]>([]);
   const [instrumenttik, setInstrumenttik] = useState<any>({});
   const [strategyName, setStrategyName] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<number | null>(null);
@@ -123,6 +125,15 @@ const ManualExecution: React.FC = () => {
   const [tradeInstrumentId, setTradeInstrumentId] = useState<number | null>(
     null,
   );
+  const [subscribedInstruments, setSubscribedInstruments] = useState<string[]>(
+    [],
+  );
+  const [legInstrumentMap, setLegInstrumentMap] = useState<
+    Record<string, string>
+  >({});
+  const [legTicks, setLegTicks] = useState<Record<string, any>>({});
+  const [displayInstrumentName, setDisplayInstrumentName] =
+    useState<string>("");
 
   const fetchExecutions = async () => {
     try {
@@ -211,54 +222,6 @@ const ManualExecution: React.FC = () => {
     }
   };
 
-  // const handleInstrumentSelect = async (instrumentId: number) => {
-  //   try {
-  //     setBaseInstrumentId(instrumentId);
-  //     setTradeInstrumentId(instrumentId); // default = spot instrument
-  //     setSelectedInstrument(instrumentId);
-
-  //     const res = await getSpotFutureUnderlying(instrumentId.toString());
-  //     const result = res.data.result;
-
-  //     setInstrumentMeta(result);
-
-  //     setSpotExpiry(result.spot_expiry || []);
-  //     setFutureExpiry(result.future_expiry || []);
-
-  //     const types = result.underlying_instrument_type || [];
-
-  //     // ✅ FUTCOM special handling
-  //     let options;
-
-  //     if (result.series === "FUTCOM") {
-  //       options = [
-  //         {
-  //           label: "FUTURE",
-  //           value: "future",
-  //         },
-  //       ];
-  //     } else {
-  //       options = types.map((type: string) => ({
-  //         label: type.toUpperCase(),
-  //         value: type,
-  //       }));
-  //     }
-
-  //     setUnderlyingOptions(options);
-
-  //     setInstrumenttik((prev: any) => ({
-  //       ...prev,
-  //       [instrumentId]: {
-  //         Price: result.ltp,
-  //         ChangeValue: result.change_value,
-  //         PercentChange: result.percent_change,
-  //       },
-  //     }));
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // };
-
   const handleInstrumentSelect = async (instrumentId: number) => {
     try {
       // ✅ reset dependent fields when instrument changes
@@ -276,7 +239,9 @@ const ManualExecution: React.FC = () => {
       const result = res.data.result;
 
       setInstrumentMeta(result);
-
+      setDisplayInstrumentName(
+        stockOptions.find((s) => Number(s.value) === instrumentId)?.label || "",
+      );
       setSpotExpiry(result.spot_expiry || []);
       setFutureExpiry(result.future_expiry || []);
 
@@ -308,21 +273,53 @@ const ManualExecution: React.FC = () => {
       console.error(error);
     }
   };
+  // const fetchFutureInstrument = async (instrument: number, expiry: string) => {
+  //   try {
+  //     const res = await getFutureInstrument(instrument, expiry);
+
+  //     const futureInstrumentId = res.data?.result?.instrument_id;
+
+  //     if (futureInstrumentId) {
+  //       // subscribe to future
+  //       setTradeInstrumentId(futureInstrumentId);
+  //       setSelectedInstrument(futureInstrumentId);
+  //     } else {
+  //       // fallback to base instrument
+  //       setTradeInstrumentId(baseInstrumentId);
+  //       setSelectedInstrument(baseInstrumentId);
+  //     }
+  //   } catch (error) {
+  //     console.error("Future Instrument API error", error);
+
+  //     setTradeInstrumentId(baseInstrumentId);
+  //     setSelectedInstrument(baseInstrumentId);
+  //   }
+  // };
+
   const fetchFutureInstrument = async (instrument: number, expiry: string) => {
     try {
       const res = await getFutureInstrument(instrument, expiry);
 
-      const futureInstrumentId = res.data?.result?.instrument_id;
+      const futureData = res.data?.result?.[0];
 
-      if (futureInstrumentId) {
-        // subscribe to future
-        setTradeInstrumentId(futureInstrumentId);
-        setSelectedInstrument(futureInstrumentId);
-      } else {
-        // fallback to base instrument
-        setTradeInstrumentId(baseInstrumentId);
-        setSelectedInstrument(baseInstrumentId);
-      }
+      if (!futureData) return;
+
+      const futureInstrumentId = futureData.instrument;
+
+      // set instrument ids
+      setTradeInstrumentId(futureInstrumentId);
+      setSelectedInstrument(futureInstrumentId);
+      setDisplayInstrumentName(futureData.instrument_name);
+
+      // ✅ store API LTP as default tick
+      setInstrumenttik((prev: any) => ({
+        ...prev,
+        [futureInstrumentId]: {
+          Price: futureData.ltp,
+          ChangeValue: futureData.ChangeValue,
+          PercentChange: futureData.PercentChange,
+        },
+      }));
     } catch (error) {
       console.error("Future Instrument API error", error);
 
@@ -353,46 +350,6 @@ const ManualExecution: React.FC = () => {
 
     return instrumentMeta?.ltp || 0;
   };
-
-  // const handleUnderlyingChange = async (value: string) => {
-  //   setSelectedUnderlying(value);
-
-  //   if (!baseInstrumentId) return;
-
-  //   // SPOT
-  //   if (value === "spot") {
-  //     setTradeInstrumentId(baseInstrumentId);
-  //     setSelectedInstrument(baseInstrumentId);
-  //   }
-
-  //   // FUTURE
-  //   if (value === "future") {
-  //     try {
-  //       const res = await getInstrumentExpiryDate(
-  //         baseInstrumentId.toString(),
-  //         value.toUpperCase(),
-  //       );
-
-  //       const dates = res.data.result?.expiry_date || [];
-
-  //       const options = dates.map((date: string) => ({
-  //         label: date,
-  //         value: date,
-  //       }));
-
-  //       setExpiryOptions(options);
-
-  //       if (dates.length > 0) {
-  //         const firstExpiry = dates[0];
-  //         setSelectedExpiry(firstExpiry);
-
-  //         await fetchFutureInstrument(baseInstrumentId, firstExpiry);
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to fetch expiry dates", error);
-  //     }
-  //   }
-  // };
 
   const handleUnderlyingChange = async (value: string) => {
     setSelectedUnderlying(value);
@@ -496,6 +453,7 @@ const ManualExecution: React.FC = () => {
 
     return true;
   };
+
   const handleAddLeg = async () => {
     if (!validateLegFields()) return;
 
@@ -545,13 +503,14 @@ const ManualExecution: React.FC = () => {
     try {
       const price = getCurrentPrice();
 
-      await getInstrumentSubscription(
-        tradeInstrumentId!, // important
-        price,
-        defaultExpiry || "",
-        "CE",
-        "ATM",
-      );
+      // await getInstrumentSubscription(
+      //   tradeInstrumentId!, // important
+      //   price,
+      //   defaultExpiry || "",
+      //   "CE",
+      //   "ATM",
+      // );
+      await callSubscriptionApi(newLeg.id, "CE", defaultExpiry || "", "ATM");
     } catch (err) {
       console.error("Subscription API error", err);
     }
@@ -560,6 +519,7 @@ const ManualExecution: React.FC = () => {
   const removeLeg = (id: string) => {
     setLegs(legs.filter((leg) => leg.id !== id));
   };
+
   const fetchStrikePrices = async (instrument: number, expiry: string) => {
     if (!instrumentMeta) return;
 
@@ -580,9 +540,12 @@ const ManualExecution: React.FC = () => {
       console.error("Strike API error", err);
     }
   };
+
   const updateLegExpiry = async (id: string, expiry: string) => {
     const leg = legs.find((l) => l.id === id);
     if (!leg) return;
+
+    const newStrike = "ATM";
 
     setLegs((prev) =>
       prev.map((l) =>
@@ -590,15 +553,19 @@ const ManualExecution: React.FC = () => {
           ? {
               ...l,
               expiry,
+              strikePrice: newStrike, // ✅ reset strike when expiry changes
             }
           : l,
       ),
     );
 
+    // fetch new strike list
     await fetchStrikePrices(selectedInstrument!, expiry);
 
-    await callSubscriptionApi(leg.optionType, expiry, leg.strikePrice || "ATM");
+    // call subscription with ATM
+    await callSubscriptionApi(id, leg.optionType, expiry, newStrike);
   };
+
   const updateStrike = async (id: string, strike: number | string) => {
     const leg = legs.find((l) => l.id === id);
     if (!leg) return;
@@ -615,37 +582,79 @@ const ManualExecution: React.FC = () => {
     );
 
     if (leg.expiry) {
-      await callSubscriptionApi(leg.optionType, leg.expiry, strike);
+      // await callSubscriptionApi(leg.optionType, leg.expiry, strike);
+      await callSubscriptionApi(id, leg.optionType, leg.expiry, strike);
     }
   };
 
   const callSubscriptionApi = async (
+    legId: string,
     optionType: "CE" | "PE" | "FUT" | "EQ",
     expiry: string,
     strike: string | number,
   ) => {
     try {
-      const price =
-        selectedInstrument && instrumenttik[selectedInstrument]?.Price
-          ? instrumenttik[selectedInstrument].Price
-          : instrumentMeta?.ltp || 0;
+      const price = getCurrentPrice();
 
       const atmShift =
         typeof strike === "string" && strike.startsWith("ATM")
           ? strike
           : String(strike);
 
-      await getInstrumentSubscription(
+      const res = await getInstrumentSubscription(
         tradeInstrumentId!,
         price,
         expiry,
         optionType,
         atmShift,
       );
+
+      const instrument = res.data?.subscribed_instruments?.[0];
+
+      if (!instrument) return;
+
+      setSubscribedInstruments((prev) =>
+        prev.includes(instrument) ? prev : [...prev, instrument],
+      );
+
+      setLegInstrumentMap((prev) => ({
+        ...prev,
+        [legId]: instrument,
+      }));
     } catch (error) {
       console.error("Subscription API error", error);
     }
   };
+
+  useEffect(() => {
+    if (!subscribedInstruments.length) return;
+
+    const newInstruments = subscribedInstruments.filter(
+      (inst) => !subscribedRef.current.includes(inst),
+    );
+
+    if (!newInstruments.length) return;
+
+    newInstruments.forEach((inst) => {
+      const topic = `tick_message_${inst}`;
+
+      socketService.subscribe(topic, (body: any) => {
+        const inner =
+          typeof body.data === "string" ? JSON.parse(body.data) : body;
+
+        setLegTicks((prev) => ({
+          ...prev,
+          [inst]: {
+            Price: inner.Price,
+            ChangeValue: inner.ChangeValue,
+            PercentChange: inner.PercentChange,
+          },
+        }));
+      });
+    });
+
+    subscribedRef.current = [...subscribedRef.current, ...newInstruments];
+  }, [subscribedInstruments]);
   const columns: ColumnsType<ManualExecutionRow> = [
     {
       title: "ID",
@@ -768,9 +777,7 @@ const ManualExecution: React.FC = () => {
     }
   };
   const showTicker =
-    selectedUnderlying === "spot" ||
-    (selectedUnderlying === "future" &&
-      selectedInstrument !== baseInstrumentId);
+    selectedUnderlying === "spot" || selectedUnderlying === "future";
 
   const currentTick =
     showTicker && selectedInstrument ? instrumenttik[selectedInstrument] : null;
@@ -791,34 +798,6 @@ const ManualExecution: React.FC = () => {
       ),
     );
   };
-  // const toggleOptionType = async (id: string) => {
-  //   const leg = legs.find((l) => l.id === id);
-  //   if (!leg) return;
-
-  //   const next =
-  //     leg.optionType === "CE" ? "PE" : leg.optionType === "PE" ? "FUT" : "CE";
-
-  //   const expiryList = next === "FUT" ? futureExpiry : spotExpiry;
-  //   const newExpiry = expiryList?.[0];
-
-  //   setLegs((prev) =>
-  //     prev.map((l) =>
-  //       l.id === id
-  //         ? {
-  //             ...l,
-  //             optionType: next,
-  //             expiry: newExpiry,
-  //           }
-  //         : l,
-  //     ),
-  //   );
-
-  //   if (newExpiry) {
-  //     await fetchStrikePrices(selectedInstrument!, newExpiry);
-
-  //     await callSubscriptionApi(next, newExpiry, leg.strikePrice || "ATM");
-  //   }
-  // };
 
   const toggleOptionType = async (id: string) => {
     const leg = legs.find((l) => l.id === id);
@@ -859,7 +838,7 @@ const ManualExecution: React.FC = () => {
 
     if (next !== "EQ" && newExpiry) {
       await fetchStrikePrices(selectedInstrument!, newExpiry);
-      await callSubscriptionApi(next, newExpiry, leg.strikePrice || "ATM");
+      await callSubscriptionApi(id, next, newExpiry, leg.strikePrice || "ATM");
     }
   };
 
@@ -1028,16 +1007,12 @@ const ManualExecution: React.FC = () => {
                   <Text className="text-[10px] text-gray-500">Enabled</Text>
                 </Col>
               </Row>
-              <div className="flex items-center gap-3 max-w-64 mt-2 text-[11px] font-semibold">
+              <div className="flex items-center gap-3 w-full mt-2 text-[11px] font-semibold">
                 {currentTick && (
                   <>
                     {/* Instrument Name */}
                     <span className="text-gray-700">
-                      {
-                        stockOptions.find(
-                          (s) => Number(s.value) === selectedInstrument,
-                        )?.label
-                      }
+                      {displayInstrumentName}
                     </span>
 
                     <span
@@ -1087,21 +1062,43 @@ const ManualExecution: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* 2. TYPE (CE/PE/FUT) - Modern Minimalist */}
                       <div className="w-[48px] flex-shrink-0">
                         <button
                           onClick={() => toggleOptionType(leg.id)}
-                          className="w-full h-7 flex items-center justify-center text-[10px] font-bold rounded border border-blue-100 bg-slate-50 text-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                          className={`w-full h-7 flex items-center justify-center text-[10px] font-bold rounded border transition-all active:scale-95
+      ${
+        leg.optionType === "CE"
+          ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+          : leg.optionType === "PE"
+            ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+      }
+    `}
                         >
                           {leg.optionType}
                         </button>
                       </div>
 
-                      {/* 3. STRIKE PLACEHOLDER (--) */}
-                      <div className="w-[28px] flex-shrink-0 flex justify-center">
-                        <span className="text-slate-300 text-[10px] font-mono tracking-tighter">
-                          --
-                        </span>
+                      {/* 3. STRIKE PRICE LIVE TICK */}
+                      <div className="w-[60px] flex-shrink-0 flex justify-center border rounded px-3 py-1">
+                        {(() => {
+                          const instrumentId = legInstrumentMap[leg.id];
+                          const tick = instrumentId
+                            ? legTicks[instrumentId]
+                            : null;
+
+                          return (
+                            <span
+                              className={`text-[13px] font-mono tracking-tighter ${
+                                tick?.ChangeValue >= 0
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {tick ? Number(tick.Price).toFixed(1) : "--"}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* 4. LOTS & 5. QTY (Combined Module) */}
