@@ -18,7 +18,7 @@ import {
   Popconfirm,
   Modal,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, ColumnType } from "antd/es/table";
 import {
   PlusOutlined,
   CloseOutlined,
@@ -45,6 +45,7 @@ import {
   updateManualExecutionEnabled,
   deleteManualExecutionById,
   copyManualExecution,
+  reorderManualExecution,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
@@ -54,6 +55,72 @@ import { getMeApi } from "../../services/authApi";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+import { createContext, useContext } from "react";
+import { Form } from "antd";
+
+const EditableContext = createContext<any>(null);
+
+const EditableRow: React.FC<any> = ({ index, ...props }) => {
+  const [form] = Form.useForm();
+
+  return (
+    <Form form={form} component={false}>
+      <EditableContext.Provider value={form}>
+        <tr {...props} />
+      </EditableContext.Provider>
+    </Form>
+  );
+};
+
+const EditableCell: React.FC<any> = ({
+  title,
+  editable,
+  children,
+  dataIndex,
+  record,
+  handleSave,
+  ...restProps
+}) => {
+  const [editing, setEditing] = React.useState(false);
+  const form = useContext(EditableContext);
+
+  const toggleEdit = () => {
+    setEditing(!editing);
+    form.setFieldsValue({ [dataIndex]: record[dataIndex] });
+  };
+
+  const save = async () => {
+    try {
+      const values = await form.validateFields();
+      toggleEdit();
+      handleSave({ ...record, ...values });
+    } catch (err) {}
+  };
+
+  let childNode = children;
+
+  if (editable) {
+    childNode = editing ? (
+      <Form.Item style={{ margin: 0 }} name={dataIndex}>
+        <InputNumber
+          size="small"
+          autoFocus
+          controls={false}
+          style={{ width: "100%", fontSize: "10px", height: "18px" }}
+          onPressEnter={save}
+          onBlur={save}
+        />
+      </Form.Item>
+    ) : (
+      <div onDoubleClick={toggleEdit} className="cursor-pointer">
+        {children}
+      </div>
+    );
+  }
+
+  return <td {...restProps}>{childNode}</td>;
+};
 
 interface ManualExecutionRow {
   key: number;
@@ -95,6 +162,8 @@ interface ExecutionLeg {
   lots: number;
   qty: number;
 }
+
+
 const ManualExecution: React.FC = () => {
   const [data, setData] = useState<ManualExecutionRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -157,39 +226,6 @@ const ManualExecution: React.FC = () => {
     try {
       setLoading(true);
       const response = await getManualExecutions();
-      // const mappedData = response.data.result.map((item: any) => ({
-      //   key: item.id,
-      //   id: item.id,
-      //   strategyName: item.strategy_name,
-      //   strategyTag: item.strategy_tag,
-      //   strategy_id: item.strategy_id,
-
-      //   instrument: item.instrument_name, // Display name
-      //   instrumentId: String(item.instrument), // Map the actual instrument ID
-
-      //   underlying: item.underlying_instrument,
-      //   underlyingInstrumentId: String(item.underlying_instrument_id), // Map the actual underlying ID
-      //   // NEW: Map the dynamic values from the API
-      //   productType: item.product_type,
-      //   entryTime: item.entry_time,
-
-      //   entryLevel:
-      //     item.entry_level != null
-      //       ? Number(item.entry_level).toLocaleString("en-IN", {
-      //           minimumFractionDigits: 2,
-      //         })
-      //       : "-",
-      //   stoplossLevel:
-      //     item.stoploss_level != null
-      //       ? Number(item.stoploss_level).toLocaleString("en-IN", {
-      //           minimumFractionDigits: 2,
-      //         })
-      //       : "-",
-      //   status: item.enabled,
-      //   actionType: item.is_position ? "pending" : "active",
-      //   isRowHighlighted: item.is_position,
-      //   isEntryLevelHighlighted: item.is_position,
-      // }));
 
       const mappedData: ManualExecutionRow[] = response.data.result.map(
         (item: any) => {
@@ -1254,8 +1290,10 @@ const ManualExecution: React.FC = () => {
       message.error("Copy failed");
     }
   };
-
-  const columns: ColumnsType<ManualExecutionRow> = [
+  type EditableColumnType = ColumnType<ManualExecutionRow> & {
+    editable?: boolean;
+  };
+  const columns: EditableColumnType[] = [
     {
       title: "ID",
       dataIndex: "id",
@@ -1290,6 +1328,7 @@ const ManualExecution: React.FC = () => {
       title: "Entry",
       dataIndex: "entryLevel",
       width: 70,
+      editable: true,
       render: (val, record) =>
         record.isEntryLevelHighlighted ? (
           <span className="bg-yellow-100 text-yellow-800 px-1 py-[1px] rounded font-medium text-[10px]">
@@ -1304,6 +1343,7 @@ const ManualExecution: React.FC = () => {
       dataIndex: "stoplossLevel",
       width: 70,
       className: "text-[10px]",
+      editable: true,
     },
     {
       title: "Client",
@@ -1377,6 +1417,83 @@ const ManualExecution: React.FC = () => {
       },
     },
   ];
+
+  const mergedColumns = columns.map((col: any) => {
+    if (!col.editable) return col;
+
+    return {
+      ...col,
+      onCell: (record: ManualExecutionRow) => ({
+        record,
+        editable: col.editable,
+        dataIndex: col.dataIndex,
+        title: col.title,
+        handleSave: handleSave,
+      }),
+    };
+  });
+  const handleSave = async (row: ManualExecutionRow) => {
+    const newData = [...data];
+    const index = newData.findIndex((item) => item.id === row.id);
+    const item = newData[index];
+
+    const updatedRow = {
+      ...item,
+      ...row,
+    };
+
+    newData.splice(index, 1, updatedRow);
+    setData(newData);
+
+    try {
+      const payload = {
+        id: updatedRow.id,
+        instrument: updatedRow.instrumentId,
+        strategy_name: updatedRow.strategyName,
+        strategy_id: updatedRow.strategy_id,
+
+        underlying_instrument: updatedRow.underlying,
+
+        underlying_instrument_id:
+          updatedRow.underlying?.toLowerCase() === "spot"
+            ? updatedRow.instrumentId
+            : updatedRow.underlyingInstrumentId,
+
+        product_type: updatedRow.productType,
+        entry_time: updatedRow.entryTime,
+
+        entry_level: Number(String(updatedRow.entryLevel).replace(/,/g, "")),
+        stoploss_level: Number(
+          String(updatedRow.stoplossLevel).replace(/,/g, ""),
+        ),
+
+        enabled: updatedRow.status,
+        reset: !updatedRow.status,
+
+        portfolio_leg: [], // keep empty because we only update entry/stoploss
+        squareoff_time: updatedRow.entryTime,
+
+        client_multiplier: {
+          1: {
+            multiplier: 1,
+            enabled: true,
+          },
+        },
+      };
+
+      const res = await postManualExecution(payload);
+
+      if (res.data.result) {
+        message.success(res.data.result);
+        fetchExecutions();
+      } else if (res.data.error) {
+        message.error(res.data.error);
+      }
+    } catch (error) {
+      console.error("Update failed", error);
+      message.error("Failed to update entry/stoploss");
+    }
+  };
 
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
@@ -1779,8 +1896,14 @@ const ManualExecution: React.FC = () => {
           ) : (
             <Spin spinning={loading}>
               <Table
+                components={{
+                  body: {
+                    row: EditableRow,
+                    cell: EditableCell,
+                  },
+                }}
                 size="small"
-                columns={columns}
+                columns={mergedColumns}
                 dataSource={data}
                 pagination={false}
                 sticky
@@ -1804,6 +1927,19 @@ const ManualExecution: React.FC = () => {
 
       <style>
         {`
+        .manual-execution-table .ant-input-number-input {
+  font-size: 10px !important;
+  font-weight: 400;
+  height: 18px;
+}
+
+.manual-execution-table .ant-input-number {
+  height: 22px !important;
+}
+
+.manual-execution-table .ant-form-item {
+  margin-bottom: 0 !important;
+}
           .row-red td { background-color: #FFDEDE !important; }
           .row-green td { background-color: #c9e9cb !important; }
           .row-yellow td { background-color: #FFF8BA !important; }
