@@ -1108,7 +1108,9 @@ const ManualExecution: React.FC = () => {
       );
       // Extract the first 5 characters (e.g., "09:15:00" becomes "09:15")
       setStartTime(exec.entry_time.substring(0, 5));
-      setEndTime(exec.squareoff_time.substring(0, 5) || "");
+      setEndTime(
+        exec.squareoff_time ? exec.squareoff_time.substring(0, 5) : "",
+      );
       setEnabled(exec.enabled);
       setDisplayInstrumentName(exec.instrument_name);
       setBaseInstrumentId(instrumentId);
