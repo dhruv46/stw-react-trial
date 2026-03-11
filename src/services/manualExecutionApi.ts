@@ -84,3 +84,11 @@ export const getManualStrategyByClientId = (id: number) => {
 export const updateManualExecutionEnabled = (payload: any) => {
   return API.post("/update_manual_execution_enabled", payload);
 };
+
+export const deleteManualExecutionById = (id: number) => {
+  return API.get(`/delete_manual_execution_by_id?id=${id}`);
+};
+
+export const copyManualExecution = (id: number) => {
+  return API.get(`/copy_manual_execution?manual_execution_id=${id}`);
+};

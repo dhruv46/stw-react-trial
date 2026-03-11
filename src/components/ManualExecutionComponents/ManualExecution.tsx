@@ -15,6 +15,8 @@ import {
   Row,
   Col,
   InputNumber,
+  Popconfirm,
+  Modal,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -41,6 +43,8 @@ import {
   getManualExecutionsById,
   getManualStrategyByClientId,
   updateManualExecutionEnabled,
+  deleteManualExecutionById,
+  copyManualExecution,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
@@ -147,45 +151,6 @@ const ManualExecution: React.FC = () => {
   const [enabled, setEnabled] = useState<boolean>(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-
-  // const fetchExecutions = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await getManualExecutions();
-  //     const mappedData = response.data.result.map((item: any) => ({
-  //       key: item.id,
-  //       id: item.id,
-  //       strategyName: item.strategy_name,
-  //       strategyTag: item.strategy_tag,
-  //       strategy_id: item.strategy_id,
-  //       instrument: item.instrument_name,
-  //       underlying: item.underlying_instrument,
-  //       entryLevel:
-  //         item.entry_level != null
-  //           ? Number(item.entry_level).toLocaleString("en-IN", {
-  //               minimumFractionDigits: 2,
-  //             })
-  //           : "-",
-
-  //       stoplossLevel:
-  //         item.stoploss_level != null
-  //           ? Number(item.stoploss_level).toLocaleString("en-IN", {
-  //               minimumFractionDigits: 2,
-  //             })
-  //           : "-",
-  //       status: item.enabled,
-  //       actionType: item.is_position ? "pending" : "active",
-  //       isRowHighlighted: item.is_position,
-  //       isEntryLevelHighlighted: item.is_position,
-  //     }));
-  //     setData(mappedData);
-  //   } catch (error) {
-  //     console.error("Failed to fetch executions:", error);
-  //     message.error("Failed to load manual execution data");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const fetchExecutions = async () => {
     try {
@@ -717,14 +682,6 @@ const ManualExecution: React.FC = () => {
   const currentTick =
     showTicker && selectedInstrument ? instrumenttik[selectedInstrument] : null;
 
-  // const handleToggleStatus = (id: number, checked: boolean) => {
-  //   setData((prev) =>
-  //     prev.map((item) =>
-  //       item.id === id ? { ...item, status: checked } : item,
-  //     ),
-  //   );
-  // };
-
   const handleToggleStatus = async (id: number, checked: boolean) => {
     try {
       const row = data.find((d) => d.id === id);
@@ -1200,6 +1157,52 @@ const ManualExecution: React.FC = () => {
     setEditingId(null);
   };
 
+  const handleDeleteExecution = (id: number) => {
+    Modal.confirm({
+      title: "Delete Manual Execution",
+      content: "Are you sure you want to delete this manual execution?",
+      okText: "Yes, Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      centered: true,
+
+      async onOk() {
+        try {
+          const res = await deleteManualExecutionById(id);
+
+          if (res.data.result) {
+            message.success(res.data.result);
+
+            setData((prev) => prev.filter((item) => item.id !== id));
+          } else {
+            message.error(res.data.error);
+          }
+        } catch (error) {
+          console.error("Delete failed", error);
+          message.error("Delete failed");
+        }
+      },
+    });
+  };
+
+  const handleCopyExecution = async (id: number) => {
+    try {
+      const res = await copyManualExecution(id);
+
+      if (res.data.result) {
+        message.success(res.data.result);
+
+        // reload table data
+        fetchExecutions();
+      } else if (res.data.error) {
+        message.error(res.data.error);
+      }
+    } catch (error) {
+      console.error("Copy failed", error);
+      message.error("Copy failed");
+    }
+  };
+
   const columns: ColumnsType<ManualExecutionRow> = [
     {
       title: "ID",
@@ -1294,21 +1297,30 @@ const ManualExecution: React.FC = () => {
                   className="text-orange-500 text-sm cursor-pointer"
                   onClick={() => handleEditExecution(record.id)}
                 />,
-                <IoPlaySharp
-                  key="play"
-                  className="text-blue-600 text-sm cursor-pointer"
-                />,
+
+                // ✅ Show Play icon only if status is true
+                record.status && (
+                  <IoPlaySharp
+                    key="play"
+                    className="text-blue-600 text-sm cursor-pointer"
+                  />
+                ),
+
                 <MdDelete
                   key="delete"
                   className="text-red-600 text-sm cursor-pointer"
+                  onClick={() => handleDeleteExecution(record.id)}
                 />,
-              ];
+              ].filter(Boolean); // removes false values
+
         icons.push(
           <CopyOutlined
             key="copy"
             className="text-blue-500 text-sm cursor-pointer"
+            onClick={() => handleCopyExecution(record.id)}
           />,
         );
+
         return <Space size={4}>{icons}</Space>;
       },
     },
@@ -1753,10 +1765,7 @@ const ManualExecution: React.FC = () => {
           font-size: 10px;
           white-space: nowrap;
         }
-        .manual-execution-table .ant-table-tbody > tr:hover > td {
-          background: #e0f2ff !important;
-          transition: 0.1s;
-        }
+      
         .manual-execution-table .ant-table-body::-webkit-scrollbar {
           width: 3px; height: 3px;
         }
