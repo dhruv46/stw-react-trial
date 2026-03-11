@@ -80,3 +80,7 @@ export const getManualExecutionsById = (id: number) => {
 export const getManualStrategyByClientId = (id: number) => {
   return API.get(`/get_manual_strategy_by_client?client_id=${id}`);
 };
+
+export const updateManualExecutionEnabled = (payload: any) => {
+  return API.post("/update_manual_execution_enabled", payload);
+};

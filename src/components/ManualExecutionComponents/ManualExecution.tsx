@@ -40,6 +40,7 @@ import {
   postManualExecution,
   getManualExecutionsById,
   getManualStrategyByClientId,
+  updateManualExecutionEnabled,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
@@ -55,14 +56,19 @@ interface ManualExecutionRow {
   id: number;
   strategyName: string;
   strategyTag: string;
-  instrument: string;
+  instrument: string; // Used for display name
+  instrumentId: string; // NEW: To store the actual Instrument ID
   underlying: string;
+  underlyingInstrumentId: string; // NEW: To store the Underlying Instrument ID
   entryLevel: string | number;
   isEntryLevelHighlighted?: boolean;
   stoplossLevel: string | number;
   status: boolean;
   actionType: "pending" | "active";
   isRowHighlighted?: boolean;
+  strategy_id: number;
+  productType: string;
+  entryTime: string;
 }
 
 interface ExecutionLeg {
@@ -142,6 +148,45 @@ const ManualExecution: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  // const fetchExecutions = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const response = await getManualExecutions();
+  //     const mappedData = response.data.result.map((item: any) => ({
+  //       key: item.id,
+  //       id: item.id,
+  //       strategyName: item.strategy_name,
+  //       strategyTag: item.strategy_tag,
+  //       strategy_id: item.strategy_id,
+  //       instrument: item.instrument_name,
+  //       underlying: item.underlying_instrument,
+  //       entryLevel:
+  //         item.entry_level != null
+  //           ? Number(item.entry_level).toLocaleString("en-IN", {
+  //               minimumFractionDigits: 2,
+  //             })
+  //           : "-",
+
+  //       stoplossLevel:
+  //         item.stoploss_level != null
+  //           ? Number(item.stoploss_level).toLocaleString("en-IN", {
+  //               minimumFractionDigits: 2,
+  //             })
+  //           : "-",
+  //       status: item.enabled,
+  //       actionType: item.is_position ? "pending" : "active",
+  //       isRowHighlighted: item.is_position,
+  //       isEntryLevelHighlighted: item.is_position,
+  //     }));
+  //     setData(mappedData);
+  //   } catch (error) {
+  //     console.error("Failed to fetch executions:", error);
+  //     message.error("Failed to load manual execution data");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchExecutions = async () => {
     try {
       setLoading(true);
@@ -151,15 +196,23 @@ const ManualExecution: React.FC = () => {
         id: item.id,
         strategyName: item.strategy_name,
         strategyTag: item.strategy_tag,
-        instrument: item.instrument_name,
+        strategy_id: item.strategy_id,
+
+        instrument: item.instrument_name, // Display name
+        instrumentId: String(item.instrument), // Map the actual instrument ID
+
         underlying: item.underlying_instrument,
+        underlyingInstrumentId: String(item.underlying_instrument_id), // Map the actual underlying ID
+        // NEW: Map the dynamic values from the API
+        productType: item.product_type,
+        entryTime: item.entry_time,
+
         entryLevel:
           item.entry_level != null
             ? Number(item.entry_level).toLocaleString("en-IN", {
                 minimumFractionDigits: 2,
               })
             : "-",
-
         stoplossLevel:
           item.stoploss_level != null
             ? Number(item.stoploss_level).toLocaleString("en-IN", {
@@ -649,119 +702,6 @@ const ManualExecution: React.FC = () => {
 
     subscribedRef.current = [...subscribedRef.current, ...newInstruments];
   }, [subscribedInstruments]);
-  const columns: ColumnsType<ManualExecutionRow> = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      width: 40,
-      className: "font-semibold text-[10px]",
-    },
-    {
-      title: "Strategy",
-      dataIndex: "strategyName",
-      width: 100,
-      className: "text-[10px]",
-    },
-    {
-      title: "Tag",
-      dataIndex: "strategyTag",
-      width: 70,
-      className: "text-[10px]",
-    },
-    {
-      title: "Instrument",
-      dataIndex: "instrument",
-      width: 90,
-      className: "text-[10px]",
-    },
-    {
-      title: "Underlying",
-      dataIndex: "underlying",
-      width: 90,
-      className: "text-[10px]",
-    },
-    {
-      title: "Entry",
-      dataIndex: "entryLevel",
-      width: 70,
-      render: (val, record) =>
-        record.isEntryLevelHighlighted ? (
-          <span className="bg-yellow-100 text-yellow-800 px-1 py-[1px] rounded font-medium text-[10px]">
-            {val}
-          </span>
-        ) : (
-          <span className="text-[10px]">{val}</span>
-        ),
-    },
-    {
-      title: "Stoploss",
-      dataIndex: "stoplossLevel",
-      width: 70,
-      className: "text-[10px]",
-    },
-    {
-      title: "Client",
-      dataIndex: "client",
-      width: 50,
-      align: "center",
-      render: () => <InfoCircleFilled className="text-blue-500 text-sm" />,
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      width: 60,
-      align: "center",
-      render: (status: boolean, record) => (
-        <Switch
-          checked={status}
-          size="small"
-          className={status ? "bg-blue-600" : "bg-gray-300"}
-          onChange={(checked) => handleToggleStatus(record.id, checked)}
-        />
-      ),
-    },
-    {
-      title: "Action",
-      key: "action",
-      width: 120,
-      render: (_, record) => {
-        const icons =
-          record.actionType === "pending"
-            ? [
-                <CloseOutlined
-                  key="close"
-                  className="text-red-500 text-sm cursor-pointer"
-                />,
-                <CheckCircleFilled
-                  key="check"
-                  className="text-green-600 text-sm cursor-pointer"
-                />,
-              ]
-            : [
-                <FiEdit2
-                  key="edit"
-                  className="text-orange-500 text-sm cursor-pointer"
-                  onClick={() => handleEditExecution(record.id)}
-                />,
-                <IoPlaySharp
-                  key="play"
-                  className="text-blue-600 text-sm cursor-pointer"
-                />,
-                <MdDelete
-                  key="delete"
-                  className="text-red-600 text-sm cursor-pointer"
-                />,
-              ];
-        icons.push(
-          <CopyOutlined
-            key="copy"
-            className="text-blue-500 text-sm cursor-pointer"
-          />,
-        );
-        return <Space size={4}>{icons}</Space>;
-      },
-    },
-  ];
 
   const handleNumberKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (
@@ -777,12 +717,62 @@ const ManualExecution: React.FC = () => {
   const currentTick =
     showTicker && selectedInstrument ? instrumenttik[selectedInstrument] : null;
 
-  const handleToggleStatus = (id: number, checked: boolean) => {
-    setData((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: checked } : item,
-      ),
-    );
+  // const handleToggleStatus = (id: number, checked: boolean) => {
+  //   setData((prev) =>
+  //     prev.map((item) =>
+  //       item.id === id ? { ...item, status: checked } : item,
+  //     ),
+  //   );
+  // };
+
+  const handleToggleStatus = async (id: number, checked: boolean) => {
+    try {
+      const row = data.find((d) => d.id === id);
+      if (!row) return;
+
+      const payload = {
+        id: row.id,
+        instrument: row.instrumentId,
+        strategy_name: row.strategyName,
+        underlying_instrument: row.underlying,
+        strategy_id: row.strategy_id,
+        // Use dynamic values from the row data
+        product_type: row.productType,
+        entry_time: row.entryTime,
+        entry_level: Number(String(row.entryLevel).replace(/,/g, "")),
+        stoploss_level: Number(String(row.stoplossLevel).replace(/,/g, "")),
+        enabled: checked,
+        reset: !checked,
+
+        // Conditionally set the underlying ID based on the underlying type
+        underlying_instrument_id:
+          row.underlying?.toLowerCase() === "spot"
+            ? row.instrumentId
+            : row.underlyingInstrumentId,
+      };
+
+      try {
+        const res = await updateManualExecutionEnabled(payload);
+
+        if (res.data.result) {
+          setData((prev) =>
+            prev.map((item) =>
+              item.id === id ? { ...item, status: checked } : item,
+            ),
+          );
+
+          message.success(res.data.result);
+        } else if (res.data.error) {
+          message.error(res.data.error);
+        }
+      } catch (error) {
+        console.error("Status update failed", error);
+        message.error("Failed to update status");
+      }
+    } catch (error) {
+      console.error("Status update failed", error);
+      message.error("Failed to update status");
+    }
   };
   const toggleSide = (id: string) => {
     setLegs((prev) =>
@@ -849,6 +839,7 @@ const ManualExecution: React.FC = () => {
 
       strategy_name: strategyName,
       strategy_id: selectedTag,
+      expiry_date: selectedExpiry ? selectedExpiry : null, // ✅ ADD THIS
 
       entry_time: startTime.format("HH:mm:ss"),
       entry_level: entryLevel,
@@ -1037,16 +1028,33 @@ const ManualExecution: React.FC = () => {
           );
 
           if (dates.length > 0) {
-            // Find matched expiry from API response or fallback to first option
             let matchedExpiry = dates[0];
-            if (exec.expiry_date) {
-              const targetExp = dayjs(exec.expiry_date);
-              const found = dates.find((d: string) =>
-                dayjs(d).isSame(targetExp, "day"),
-              );
-              if (found) matchedExpiry = found;
+
+            // ✅ FIX: Use the leg's expiry date if the main execution expiry is null
+            const targetExpiry = exec.expiry_date || legsData?.[0]?.expiry_date;
+
+            if (targetExpiry) {
+              const targetDayjs = dayjs(targetExpiry);
+              const apiExpiryStr = targetDayjs
+                .format("DD-MMM-YYYY")
+                .toUpperCase();
+
+              const foundOption = dates.find((d: string) => {
+                // Check if strict string matches (e.g. "02-APR-2026")
+                if (d.toUpperCase() === apiExpiryStr) return true;
+                // Fallback to dayjs date comparison
+                if (dayjs(d).isValid() && dayjs(d).isSame(targetDayjs, "day"))
+                  return true;
+                return false;
+              });
+
+              if (foundOption) {
+                matchedExpiry = foundOption;
+              }
             }
+
             setSelectedExpiry(matchedExpiry);
+            await fetchFutureInstrument(instrumentId, matchedExpiry);
           }
           currentTradeInstId = futureInstrumentId;
           setTradeInstrumentId(futureInstrumentId);
@@ -1110,7 +1118,7 @@ const ManualExecution: React.FC = () => {
               const price = exec.ltp || metaResult.ltp || 0;
 
               const subRes = await getInstrumentSubscription(
-                currentTradeInstId,
+                instrumentId,
                 price,
                 legExpiry,
                 leg.instrument_type,
@@ -1191,6 +1199,120 @@ const ManualExecution: React.FC = () => {
     setIsEditMode(false);
     setEditingId(null);
   };
+
+  const columns: ColumnsType<ManualExecutionRow> = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      width: 40,
+      className: "font-semibold text-[10px]",
+    },
+    {
+      title: "Strategy",
+      dataIndex: "strategyName",
+      width: 100,
+      className: "text-[10px]",
+    },
+    {
+      title: "Tag",
+      dataIndex: "strategyTag",
+      width: 70,
+      className: "text-[10px]",
+    },
+    {
+      title: "Instrument",
+      dataIndex: "instrument",
+      width: 90,
+      className: "text-[10px]",
+    },
+    {
+      title: "Underlying",
+      dataIndex: "underlying",
+      width: 90,
+      className: "text-[10px]",
+    },
+    {
+      title: "Entry",
+      dataIndex: "entryLevel",
+      width: 70,
+      render: (val, record) =>
+        record.isEntryLevelHighlighted ? (
+          <span className="bg-yellow-100 text-yellow-800 px-1 py-[1px] rounded font-medium text-[10px]">
+            {val}
+          </span>
+        ) : (
+          <span className="text-[10px]">{val}</span>
+        ),
+    },
+    {
+      title: "Stoploss",
+      dataIndex: "stoplossLevel",
+      width: 70,
+      className: "text-[10px]",
+    },
+    {
+      title: "Client",
+      dataIndex: "client",
+      width: 50,
+      align: "center",
+      render: () => <InfoCircleFilled className="text-blue-500 text-sm" />,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      width: 60,
+      align: "center",
+      render: (status: boolean, record) => (
+        <Switch
+          checked={status}
+          size="small"
+          className={status ? "bg-blue-600" : "bg-gray-300"}
+          onChange={(checked) => handleToggleStatus(record.id, checked)}
+        />
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      width: 120,
+      render: (_, record) => {
+        const icons =
+          record.actionType === "pending"
+            ? [
+                <CloseOutlined
+                  key="close"
+                  className="text-red-500 text-sm cursor-pointer"
+                />,
+                <CheckCircleFilled
+                  key="check"
+                  className="text-green-600 text-sm cursor-pointer"
+                />,
+              ]
+            : [
+                <FiEdit2
+                  key="edit"
+                  className="text-orange-500 text-sm cursor-pointer"
+                  onClick={() => handleEditExecution(record.id)}
+                />,
+                <IoPlaySharp
+                  key="play"
+                  className="text-blue-600 text-sm cursor-pointer"
+                />,
+                <MdDelete
+                  key="delete"
+                  className="text-red-600 text-sm cursor-pointer"
+                />,
+              ];
+        icons.push(
+          <CopyOutlined
+            key="copy"
+            className="text-blue-500 text-sm cursor-pointer"
+          />,
+        );
+        return <Space size={4}>{icons}</Space>;
+      },
+    },
+  ];
 
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
