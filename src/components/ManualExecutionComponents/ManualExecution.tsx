@@ -190,7 +190,7 @@ const ManualExecution: React.FC = () => {
     fetchExecutions();
   }, []);
 
-  const fetchTagOptions = async () => {
+  const fetchTagOptions = async (currentStrategyId?: number) => {
     try {
       const fetchMe = await getMeApi();
       const clientId = fetchMe.data.user_clients?.[0];
@@ -203,6 +203,9 @@ const ManualExecution: React.FC = () => {
         clientRes.data.result?.flatMap((c: any) => c.strategy_id) || [];
 
       const strategyList = strategyRes.data.result || [];
+      if (currentStrategyId && !clientStrategies.includes(currentStrategyId)) {
+        clientStrategies.push(currentStrategyId);
+      }
 
       const filteredStrategies = strategyList.filter((s: any) =>
         clientStrategies.includes(s.id),
@@ -457,11 +460,6 @@ const ManualExecution: React.FC = () => {
       stockOptions.find((s) => Number(s.value) === selectedInstrument)?.label ||
       "";
 
-    // const defaultOptionType: "CE" | "PE" | "FUT" = "CE";
-
-    // const expiryList = defaultOptionType === "FUT" ? futureExpiry : spotExpiry;
-
-    // const defaultExpiry = expiryList?.[0] || undefined;
     const lotSize =
       selectedUnderlying === "future"
         ? Number(instrumentMeta?.future_lotsize)
@@ -470,7 +468,7 @@ const ManualExecution: React.FC = () => {
     const defaultExpiry = spotExpiry?.[0] || undefined;
 
     const newLeg: ExecutionLeg = {
-      id: Date.now().toString(),
+      id: `temp_${Date.now()}`,
       strategyName,
       instrumentId: selectedInstrument!,
       instrumentName,
@@ -841,7 +839,8 @@ const ManualExecution: React.FC = () => {
 
   const buildPayload = () => {
     const payload = {
-      id: 0,
+      // id: 0,
+      id: isEditMode && editingId ? editingId : 0,
       underlying_instrument: selectedUnderlying?.toUpperCase(),
       underlying_instrument_id: String(tradeInstrumentId),
 
@@ -855,25 +854,51 @@ const ManualExecution: React.FC = () => {
       entry_level: entryLevel,
 
       enabled: enabled,
-      reset: true,
+      reset: !enabled,
       stoploss_level: stoplossLevel,
 
-      portfolio_leg: legs.map((leg) => ({
-        id: 0,
-        signal: leg.side,
-        instrument_type: leg.optionType,
-        strike_selection:
-          leg.optionType === "CE" || leg.optionType === "PE"
-            ? leg.strikePrice
-            : undefined,
+      // portfolio_leg: legs.map((leg) => ({
+      //   // id: 0,
+      //   id: isEditMode && leg.id ? leg.id : 0,
+      //   signal: leg.side,
+      //   instrument_type: leg.optionType,
+      //   strike_selection:
+      //     leg.optionType === "CE" || leg.optionType === "PE"
+      //       ? leg.strikePrice
+      //       : undefined,
 
-        expiry_date: leg.optionType !== "EQ" ? leg.expiry : undefined,
+      //   expiry_date: leg.optionType !== "EQ" ? leg.expiry : undefined,
 
-        manual_execution_id: 0,
-        delete: false,
-        lots: String(leg.lots),
-        quantity: leg.qty,
-      })),
+      //   // manual_execution_id: 0,
+      //   manual_execution_id: isEditMode && editingId ? editingId : 0,
+      //   delete: false,
+      //   lots: String(leg.lots),
+      //   quantity: leg.qty,
+      // })),
+
+      portfolio_leg: legs.map((leg) => {
+        // ✅ Explicitly check if it's a frontend-only temporary leg
+        const isNewLeg = String(leg.id).startsWith("temp_");
+
+        return {
+          // ✅ Send 0 if temporary, otherwise send the real database ID
+          id: isNewLeg ? 0 : Number(leg.id),
+
+          signal: leg.side,
+          instrument_type: leg.optionType,
+          strike_selection:
+            leg.optionType === "CE" || leg.optionType === "PE"
+              ? String(leg.strikePrice)
+              : undefined,
+
+          expiry_date: leg.optionType !== "EQ" ? leg.expiry : undefined,
+
+          manual_execution_id: isEditMode && editingId ? editingId : 0,
+          delete: false,
+          lots: String(leg.lots),
+          quantity: leg.qty,
+        };
+      }),
 
       squareoff_time: endTime.format("HH:mm:ss"),
 
@@ -906,7 +931,7 @@ const ManualExecution: React.FC = () => {
       } else {
         message.success("Success");
       }
-
+      resetForm();
       setIsAdding(false);
       fetchExecutions();
     } catch (error: any) {
@@ -928,7 +953,7 @@ const ManualExecution: React.FC = () => {
       setIsEditMode(true);
       setEditingId(exec.id);
 
-      await fetchTagOptions();
+      await fetchTagOptions(exec.strategy_id);
 
       const instrumentId = Number(exec.instrument);
       const futureInstrumentId = Number(exec.underlying_instrument_id);
@@ -1132,6 +1157,41 @@ const ManualExecution: React.FC = () => {
       message.error("Failed to load execution data");
     }
   };
+
+  const resetForm = () => {
+    setStrategyName("");
+    setSelectedTag(null);
+    setSelectedInstrument(null);
+    setBaseInstrumentId(null);
+    setTradeInstrumentId(null);
+
+    setSelectedUnderlying(null);
+    setSelectedExpiry(null);
+
+    setEntryLevel(null);
+    setStoplossLevel(null);
+
+    setStartTime(dayjs("09:15 AM", "hh:mm A"));
+    setEndTime(dayjs("03:15 PM", "hh:mm A"));
+
+    setTradeType("intraday");
+    setEnabled(false);
+
+    setLegs([]);
+    setStrikePrices([]);
+    setExpiryOptions([]);
+
+    setInstrumentMeta(null);
+    setDisplayInstrumentName("");
+
+    setSubscribedInstruments([]);
+    setLegInstrumentMap({});
+    setLegTicks({});
+
+    setIsEditMode(false);
+    setEditingId(null);
+  };
+
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
@@ -1151,6 +1211,7 @@ const ManualExecution: React.FC = () => {
             <PlusOutlined
               className="text-blue-600 text-sm cursor-pointer"
               onClick={() => {
+                resetForm();
                 setIsAdding(true);
                 fetchTagOptions();
               }}
@@ -1519,6 +1580,7 @@ const ManualExecution: React.FC = () => {
                 <Button
                   className="px-4 h-7 text-red-600 border font-semibold"
                   onClick={() => {
+                    resetForm();
                     setIsAdding(false);
                     setIsEditMode(false);
                     setEditingId(null);
