@@ -270,8 +270,8 @@ const ManualExecution: React.FC = () => {
   const [selectedTag, setSelectedTag] = useState<number | null>(null);
   const [entryLevel, setEntryLevel] = useState<number | null>(null);
   const [stoplossLevel, setStoplossLevel] = useState<number | null>(null);
-  const [startTime, setStartTime] = useState<any>(dayjs("09:15 AM", "hh:mm A"));
-  const [endTime, setEndTime] = useState<any>(dayjs("03:15 PM", "hh:mm A"));
+  const [startTime, setStartTime] = useState<string>("09:15");
+  const [endTime, setEndTime] = useState<string>("15:27");
   const [legs, setLegs] = useState<ExecutionLeg[]>([]);
   const [instrumentMeta, setInstrumentMeta] = useState<any>(null);
 
@@ -589,8 +589,36 @@ const ManualExecution: React.FC = () => {
     }
   };
 
+  // const toggleTradeType = () => {
+  //   setTradeType((prev) => (prev === "intraday" ? "positional" : "intraday"));
+  // };
   const toggleTradeType = () => {
-    setTradeType((prev) => (prev === "intraday" ? "positional" : "intraday"));
+    setTradeType((prev) => {
+      const nextType = prev === "intraday" ? "positional" : "intraday";
+
+      // Instantly validate if switching TO intraday
+      if (nextType === "intraday") {
+        setEndTime("15:27");
+        let validatedEndTime = endTime;
+
+        if (validatedEndTime > "15:27") {
+          message.warning("Adjusted Squareoff time to max 15:27 for Intraday");
+          validatedEndTime = "15:27";
+          setEndTime(validatedEndTime);
+        }
+
+        if (validatedEndTime < startTime) {
+          message.error("Squareoff time cannot be less than Start time");
+          const safeTime = startTime > "15:27" ? "15:27" : startTime;
+          setEndTime(safeTime);
+          if (startTime > "15:27") setStartTime("15:27");
+        }
+      } else {
+        setEndTime("");
+      }
+
+      return nextType;
+    });
   };
 
   const validateLegFields = () => {
@@ -960,7 +988,8 @@ const ManualExecution: React.FC = () => {
       strategy_id: selectedTag,
       expiry_date: selectedExpiry ? selectedExpiry : null, // ✅ ADD THIS
 
-      entry_time: startTime.format("HH:mm:ss"),
+      entry_time: `${startTime}:00`,
+      squareoff_time: endTime ? `${endTime}:00` : null,
       entry_level: entryLevel,
 
       enabled: enabled,
@@ -1010,7 +1039,7 @@ const ManualExecution: React.FC = () => {
         };
       }),
 
-      squareoff_time: endTime.format("HH:mm:ss"),
+      // squareoff_time: endTime.format("HH:mm:ss"),
 
       client_multiplier: {
         1: {
@@ -1077,8 +1106,9 @@ const ManualExecution: React.FC = () => {
       setTradeType(
         exec.product_type === "positional" ? "positional" : "intraday",
       );
-      setStartTime(dayjs(exec.entry_time, "HH:mm:ss"));
-      setEndTime(dayjs(exec.squareoff_time, "HH:mm:ss"));
+      // Extract the first 5 characters (e.g., "09:15:00" becomes "09:15")
+      setStartTime(exec.entry_time.substring(0, 5));
+      setEndTime(exec.squareoff_time.substring(0, 5) || "");
       setEnabled(exec.enabled);
       setDisplayInstrumentName(exec.instrument_name);
       setBaseInstrumentId(instrumentId);
@@ -1298,8 +1328,8 @@ const ManualExecution: React.FC = () => {
     setEntryLevel(null);
     setStoplossLevel(null);
 
-    setStartTime(dayjs("09:15 AM", "hh:mm A"));
-    setEndTime(dayjs("03:15 PM", "hh:mm A"));
+    setStartTime("09:15");
+    setEndTime("15:27");
 
     setTradeType("intraday");
     setEnabled(false);
@@ -1622,6 +1652,92 @@ const ManualExecution: React.FC = () => {
       }
     }
   };
+
+  const handleTimeFormat = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setTimeState: any,
+  ) => {
+    // Remove everything except numbers
+    let value = e.target.value.replace(/[^0-9]/g, "");
+
+    if (value.length >= 3) {
+      // Enforce max 23 for hours
+      let hours = parseInt(value.slice(0, 2), 10);
+      if (hours > 23) hours = 23;
+
+      // Auto-insert the colon
+      value = `${hours.toString().padStart(2, "0")}:${value.slice(2)}`;
+    }
+
+    // Enforce max 59 for minutes
+    if (value.length === 5) {
+      let mins = parseInt(value.slice(3, 5), 10);
+      if (mins > 59) mins = 59;
+      value = `${value.slice(0, 3)}${mins.toString().padStart(2, "0")}`;
+    }
+
+    // Limit length to 5 characters (HH:mm)
+    setTimeState(value.slice(0, 5));
+  };
+
+  const handleStartTimeBlur = (value: string) => {
+    // 1. Auto-fill incomplete typing
+    let formattedValue = value;
+    if (value.length === 1) formattedValue = `0${value}:00`;
+    else if (value.length === 2) formattedValue = `${value}:00`;
+    else if (value.length === 3) formattedValue = `${value}00`;
+    else if (value.length === 4) formattedValue = `${value}0`;
+
+    // 2. Intraday safety check for Start Time
+    if (tradeType === "intraday" && formattedValue > "15:27") {
+      message.warning("Intraday start time cannot exceed 15:27");
+      formattedValue = "15:27";
+    }
+
+    setStartTime(formattedValue);
+  };
+
+  const handleEndTimeBlur = (value: string) => {
+    // If input is cleared
+    if (!value) {
+      if (tradeType === "intraday") {
+        setEndTime("15:27"); // Force default if intraday
+      } else {
+        setEndTime(""); // Allow blank if positional
+      }
+      return;
+    }
+
+    // 1. Auto-fill incomplete typing
+    let formattedValue = value;
+    if (value.length === 1) formattedValue = `0${value}:00`;
+    else if (value.length === 2) formattedValue = `${value}:00`;
+    else if (value.length === 3) formattedValue = `${value}00`;
+    else if (value.length === 4) formattedValue = `${value}0`;
+
+    // 2. Strict Validations based on Trade Type
+    if (tradeType === "intraday") {
+      if (formattedValue > "15:27") {
+        message.warning("Intraday Squareoff time cannot exceed 15:27");
+        formattedValue = "15:27";
+      }
+      if (formattedValue < startTime) {
+        message.error("Squareoff time cannot be less than Start time");
+        formattedValue = startTime; // Revert to match start time
+      }
+    } else if (tradeType === "positional") {
+      // Positional boundaries: Between 09:15 and 15:27
+      if (formattedValue < "09:15") {
+        message.warning("Squareoff time cannot be earlier than 09:15");
+        formattedValue = "09:15";
+      } else if (formattedValue > "15:27") {
+        message.warning("Squareoff time cannot exceed 15:27");
+        formattedValue = "15:27";
+      }
+    }
+
+    setEndTime(formattedValue);
+  };
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
@@ -1652,66 +1768,87 @@ const ManualExecution: React.FC = () => {
         <div className="flex-1 p-1 overflow-auto">
           {isAdding ? (
             <div className="p-2 bg-white">
-              <Row gutter={[8, 8]}>
+              <Row gutter={[8, 12]}>
+                {/* Strategy Name */}
                 <Col span={4}>
-                  <Input
-                    placeholder="Strategy Name"
-                    className="text-[11px] h-6"
-                    value={strategyName}
-                    onChange={(e) => setStrategyName(e.target.value)}
-                  />
+                  <div className="field-container">
+                    <span className="field-label">Strategy Name</span>
+                    <Input
+                      placeholder="Enter Name"
+                      className="text-[11px]"
+                      value={strategyName}
+                      onChange={(e) => setStrategyName(e.target.value)}
+                    />
+                  </div>
                 </Col>
-                <Col span={4}>
-                  <Select
-                    placeholder="Tag"
-                    className="w-full text-[11px] h-6"
-                    value={selectedTag || null}
-                    options={tagOptions}
-                    onChange={(val) => setSelectedTag(val)}
-                  />
-                </Col>
-                <Col span={4}>
-                  <Select
-                    showSearch
-                    placeholder="Search Stock"
-                    className="w-full text-[11px]"
-                    style={{ height: 24 }}
-                    filterOption={false}
-                    value={selectedInstrument}
-                    onSelect={handleInstrumentSelect} // ✅ call API here
-                    onSearch={handleStockSearch}
-                    options={stockOptions}
-                  />
-                </Col>
-                <Col span={4}>
-                  <Select
-                    placeholder="Underlying"
-                    className="w-full text-[11px] h-6"
-                    options={underlyingOptions}
-                    value={selectedUnderlying} // ✅ add this
-                    onChange={handleUnderlyingChange}
-                  />
-                </Col>
-                <Col span={4}>
-                  <Select
-                    placeholder="Expiry"
-                    className="w-full text-[11px] h-6"
-                    options={expiryOptions}
-                    disabled={selectedUnderlying !== "future"}
-                    value={selectedExpiry}
-                    onChange={async (val) => {
-                      setSelectedExpiry(val);
 
-                      if (val && baseInstrumentId) {
-                        await fetchFutureInstrument(baseInstrumentId, val);
-                      }
-                    }}
-                  />
-                </Col>
+                {/* Tag */}
                 <Col span={4}>
+                  <div className="field-container">
+                    <span className="field-label">Tag</span>
+                    <Select
+                      placeholder="Select Tag"
+                      className="w-full text-[11px]"
+                      value={selectedTag || null}
+                      options={tagOptions}
+                      onChange={(val) => setSelectedTag(val)}
+                    />
+                  </div>
+                </Col>
+
+                {/* Stock Name */}
+                <Col span={4}>
+                  <div className="field-container">
+                    <span className="field-label">Stock Name</span>
+                    <Select
+                      showSearch
+                      placeholder="Search..."
+                      className="w-full text-[11px]"
+                      filterOption={false}
+                      value={selectedInstrument}
+                      onSelect={handleInstrumentSelect}
+                      onSearch={handleStockSearch}
+                      options={stockOptions}
+                    />
+                  </div>
+                </Col>
+
+                {/* Underlying */}
+                <Col span={4}>
+                  <div className="field-container">
+                    <span className="field-label">Underlying</span>
+                    <Select
+                      className="w-full text-[11px]"
+                      options={underlyingOptions}
+                      value={selectedUnderlying}
+                      onChange={handleUnderlyingChange}
+                    />
+                  </div>
+                </Col>
+
+                {/* Expiry */}
+                <Col span={4}>
+                  <div className="field-container">
+                    <span className="field-label">Expiry</span>
+                    <Select
+                      className="w-full text-[11px]"
+                      options={expiryOptions}
+                      disabled={selectedUnderlying !== "future"}
+                      value={selectedExpiry}
+                      onChange={async (val) => {
+                        setSelectedExpiry(val);
+                        if (val && baseInstrumentId)
+                          await fetchFutureInstrument(baseInstrumentId, val);
+                      }}
+                    />
+                  </div>
+                </Col>
+
+                {/* Trade Type Button (Keep as is for high visibility) */}
+                <Col span={4} className="flex items-end pb-[2px]">
                   <Button
                     onClick={toggleTradeType}
-                    className={`w-full h-6 text-[11px] font-semibold ${
+                    className={`w-full h-7 text-[11px] font-bold rounded ${
                       tradeType === "intraday"
                         ? "bg-blue-600 text-white"
                         : "bg-yellow-400 text-black"
@@ -1721,77 +1858,100 @@ const ManualExecution: React.FC = () => {
                   </Button>
                 </Col>
 
+                {/* Entry Level */}
                 <Col span={4}>
-                  <InputNumber
-                    placeholder="Entry Level"
-                    className="w-full text-[11px] h-6"
-                    min={0.01}
-                    step={0.01}
-                    controls={false}
-                    style={{ width: "100%" }}
-                    value={entryLevel}
-                    onKeyDown={handleNumberKeyDown}
-                    onChange={(val) => setEntryLevel(val)}
-                  />
-                </Col>
-                <Col span={4}>
-                  <InputNumber
-                    placeholder="Stoploss Level"
-                    className="w-full text-[11px] h-6"
-                    min={0.01}
-                    step={0.01}
-                    controls={false}
-                    style={{ width: "100%" }}
-                    value={stoplossLevel}
-                    onChange={(val) => setStoplossLevel(val)}
-                    onKeyDown={handleNumberKeyDown}
-                  />
-                </Col>
-                <Col span={4}>
-                  <TimePicker
-                    className="w-full h-6 text-[11px]"
-                    value={startTime}
-                    onChange={(val) => setStartTime(val)}
-                    format="hh:mm A"
-                    use12Hours
-                    suffixIcon={<ClockCircleOutlined />}
-                  />
+                  <div className="field-container">
+                    <span className="field-label">Entry Level</span>
+                    <InputNumber
+                      className="w-full text-[11px]"
+                      min={0.01}
+                      step={0.01}
+                      controls={false}
+                      value={entryLevel}
+                      onKeyDown={handleNumberKeyDown}
+                      onChange={(val) => setEntryLevel(val)}
+                    />
+                  </div>
                 </Col>
 
+                {/* Stoploss Level */}
                 <Col span={4}>
-                  <TimePicker
-                    className="w-full h-6 text-[11px]"
-                    value={endTime}
-                    onChange={(val) => setEndTime(val)}
-                    format="hh:mm A"
-                    use12Hours
-                    suffixIcon={<ClockCircleOutlined />}
-                  />
+                  <div className="field-container">
+                    <span className="field-label">Stoploss Level</span>
+                    <InputNumber
+                      className="w-full text-[11px]"
+                      min={0.01}
+                      step={0.01}
+                      controls={false}
+                      value={stoplossLevel}
+                      onChange={(val) => setStoplossLevel(val)}
+                      onKeyDown={handleNumberKeyDown}
+                    />
+                  </div>
                 </Col>
+
+                {/* Start Time */}
+                {/* Start Time */}
                 <Col span={4}>
+                  <div className="field-container">
+                    <span className="field-label">Start Time</span>
+                    <Input
+                      placeholder="HH:mm"
+                      className="text-[11px]"
+                      style={{ height: "28px", paddingRight: "8px" }}
+                      value={startTime}
+                      onChange={(e) => handleTimeFormat(e, setStartTime)}
+                      onBlur={(e) => handleStartTimeBlur(e.target.value)}
+                    />
+                  </div>
+                </Col>
+
+                {/* Squareoff Time */}
+                {/* Squareoff Time */}
+                {/* Squareoff Time */}
+                {/* Squareoff Time */}
+                <Col span={4}>
+                  <div className="field-container">
+                    <span className="field-label">Squareoff Time</span>
+                    <Input
+                      placeholder="HH:mm"
+                      className="text-[11px]"
+                      style={{ height: "28px", paddingRight: "8px" }}
+                      value={endTime}
+                      onChange={(e) => handleTimeFormat(e, setEndTime)}
+                      onBlur={(e) => handleEndTimeBlur(e.target.value)}
+                    />
+                  </div>
+                </Col>
+
+                {/* Add Leg Button */}
+                <Col span={4} className="flex items-end pb-[2px]">
                   <Button
                     onClick={handleAddLeg}
                     disabled={
                       !strategyName ||
                       !selectedTag ||
                       !selectedInstrument ||
-                      !selectedUnderlying ||
-                      !entryLevel ||
-                      !startTime ||
-                      !endTime
+                      !entryLevel
                     }
-                    className="w-full h-6 text-[11px] bg-emerald-700 text-white hover:bg-emerald-800"
+                    className="w-full h-7 text-[11px] bg-emerald-700 text-white hover:bg-emerald-800 font-bold"
                   >
                     Add Leg +
                   </Button>
                 </Col>
-                <Col span={4} className="flex items-center gap-1">
-                  <Switch
-                    size="small"
-                    checked={enabled}
-                    onChange={(checked) => setEnabled(checked)}
-                  />
-                  <Text className="text-[10px] text-gray-500">Enabled</Text>
+
+                {/* Enabled Toggle */}
+                <Col span={4} className="flex items-end justify-center pb-1">
+                  <div className="flex flex-col items-center">
+                    <Switch
+                      size="small"
+                      checked={enabled}
+                      onChange={(checked) => setEnabled(checked)}
+                    />
+                    <Text className="text-[9px] text-gray-500 font-bold uppercase mt-1">
+                      Enabled
+                    </Text>
+                  </div>
                 </Col>
               </Row>
               <div className="flex items-center gap-3 w-full mt-2 text-[11px] font-semibold">
@@ -2103,6 +2263,49 @@ const ManualExecution: React.FC = () => {
           border-radius: 3px;
         }
         
+
+        /* Container for the labeled field */
+.field-container {
+  position: relative;
+  margin-top: 8px; /* Space for the label to sit on top */
+}
+
+/* The Label sitting on the border */
+.field-label {
+  position: absolute;
+  top: -8px; /* Pulls it up to sit on the border */
+  left: 10px;
+  background-color: white; /* Matches card background to hide border behind text */
+  padding: 0 4px;
+  font-size: 10px;
+  color: #666;
+  z-index: 1;
+  pointer-events: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Adjusting Ant Design inputs to fit the style */
+.field-container .ant-input,
+.field-container .ant-select-selector,
+.field-container .ant-input-number {
+  border-color: #d9d9d9 !important;
+  border-radius: 4px !important;
+  height: 28px !important; /* Slightly taller for better label alignment */
+}
+
+/* Specialized styling for HTML time input to match Ant Design */
+.custom-time-input {
+  width: 100%;
+  height: 28px;
+  font-size: 11px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 0 8px;
+  outline: none;
+}
+.custom-time-input:hover { border-color: #4096ff; }
+.custom-time-input:focus { border-color: #1677ff; box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1); }
       `}
       </style>
     </div>
