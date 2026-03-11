@@ -73,6 +73,7 @@ interface ManualExecutionRow {
   strategy_id: number;
   productType: string;
   entryTime: string;
+  rowColor?: string;
 }
 
 interface ExecutionLeg {
@@ -156,39 +157,89 @@ const ManualExecution: React.FC = () => {
     try {
       setLoading(true);
       const response = await getManualExecutions();
-      const mappedData = response.data.result.map((item: any) => ({
-        key: item.id,
-        id: item.id,
-        strategyName: item.strategy_name,
-        strategyTag: item.strategy_tag,
-        strategy_id: item.strategy_id,
+      // const mappedData = response.data.result.map((item: any) => ({
+      //   key: item.id,
+      //   id: item.id,
+      //   strategyName: item.strategy_name,
+      //   strategyTag: item.strategy_tag,
+      //   strategy_id: item.strategy_id,
 
-        instrument: item.instrument_name, // Display name
-        instrumentId: String(item.instrument), // Map the actual instrument ID
+      //   instrument: item.instrument_name, // Display name
+      //   instrumentId: String(item.instrument), // Map the actual instrument ID
 
-        underlying: item.underlying_instrument,
-        underlyingInstrumentId: String(item.underlying_instrument_id), // Map the actual underlying ID
-        // NEW: Map the dynamic values from the API
-        productType: item.product_type,
-        entryTime: item.entry_time,
+      //   underlying: item.underlying_instrument,
+      //   underlyingInstrumentId: String(item.underlying_instrument_id), // Map the actual underlying ID
+      //   // NEW: Map the dynamic values from the API
+      //   productType: item.product_type,
+      //   entryTime: item.entry_time,
 
-        entryLevel:
-          item.entry_level != null
-            ? Number(item.entry_level).toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-              })
-            : "-",
-        stoplossLevel:
-          item.stoploss_level != null
-            ? Number(item.stoploss_level).toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-              })
-            : "-",
-        status: item.enabled,
-        actionType: item.is_position ? "pending" : "active",
-        isRowHighlighted: item.is_position,
-        isEntryLevelHighlighted: item.is_position,
-      }));
+      //   entryLevel:
+      //     item.entry_level != null
+      //       ? Number(item.entry_level).toLocaleString("en-IN", {
+      //           minimumFractionDigits: 2,
+      //         })
+      //       : "-",
+      //   stoplossLevel:
+      //     item.stoploss_level != null
+      //       ? Number(item.stoploss_level).toLocaleString("en-IN", {
+      //           minimumFractionDigits: 2,
+      //         })
+      //       : "-",
+      //   status: item.enabled,
+      //   actionType: item.is_position ? "pending" : "active",
+      //   isRowHighlighted: item.is_position,
+      //   isEntryLevelHighlighted: item.is_position,
+      // }));
+
+      const mappedData: ManualExecutionRow[] = response.data.result.map(
+        (item: any) => {
+          let rowColor = "";
+
+          if (!item.completed && !item.enabled && !item.is_position) {
+            rowColor = "row-red";
+          } else if (item.completed && !item.enabled && !item.is_position) {
+            rowColor = "row-green";
+          } else if (!item.completed && item.enabled && item.is_position) {
+            rowColor = "row-yellow";
+          } else if (!item.completed && item.enabled && !item.is_position) {
+            rowColor = "row-white";
+          }
+
+          return {
+            key: item.id,
+            id: item.id,
+            strategyName: item.strategy_name,
+            strategyTag: item.strategy_tag,
+            strategy_id: item.strategy_id,
+            instrument: item.instrument_name,
+            instrumentId: String(item.instrument),
+            underlying: item.underlying_instrument,
+            underlyingInstrumentId: String(item.underlying_instrument_id),
+
+            productType: item.product_type,
+            entryTime: item.entry_time,
+
+            entryLevel:
+              item.entry_level != null
+                ? Number(item.entry_level).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                  })
+                : "-",
+
+            stoplossLevel:
+              item.stoploss_level != null
+                ? Number(item.stoploss_level).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                  })
+                : "-",
+
+            status: item.enabled,
+            actionType: item.is_position ? "pending" : "active",
+
+            rowColor,
+          };
+        },
+      );
       setData(mappedData);
     } catch (error) {
       console.error("Failed to fetch executions:", error);
@@ -719,6 +770,7 @@ const ManualExecution: React.FC = () => {
           );
 
           message.success(res.data.result);
+          fetchExecutions();
         } else if (res.data.error) {
           message.error(res.data.error);
         }
@@ -1732,9 +1784,7 @@ const ManualExecution: React.FC = () => {
                 dataSource={data}
                 pagination={false}
                 sticky
-                rowClassName={(record) =>
-                  record.isRowHighlighted ? "bg-yellow-50" : ""
-                }
+                rowClassName={(record) => record.rowColor || ""}
                 tableLayout="fixed"
                 scroll={{ x: "max-content", y: "calc(100vh - 150px)" }}
                 className="manual-execution-table"
@@ -1754,8 +1804,12 @@ const ManualExecution: React.FC = () => {
 
       <style>
         {`
+          .row-red td { background-color: #FFDEDE !important; }
+          .row-green td { background-color: #c9e9cb !important; }
+          .row-yellow td { background-color: #FFF8BA !important; }
+          .row-white td { background-color: #ffffff !important; }
         .manual-execution-table .ant-table-thead > tr > th {
-          background: #f1f5f9 !important;
+         
           font-size: 10px;
           font-weight: 600;
           padding: 4px 4px;
@@ -1770,9 +1824,10 @@ const ManualExecution: React.FC = () => {
           width: 3px; height: 3px;
         }
         .manual-execution-table .ant-table-body::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
+
           border-radius: 3px;
         }
+        
       `}
       </style>
     </div>
