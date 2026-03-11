@@ -376,6 +376,18 @@ const ManualExecution: React.FC = () => {
 
       const clientRes = await getManualStrategyByClientId(clientId);
 
+      // 🔹 Check if strategy_id is null
+      const strategies = clientRes.data.result || [];
+
+      // ONLY show the error if we are creating a NEW execution (!currentStrategyId)
+      // and there are no available tags.
+      if (
+        (!strategies.length || strategies[0]?.strategy_id === null) &&
+        !currentStrategyId
+      ) {
+        message.error("All strategy tags are in use.");
+      }
+
       const strategyRes = await FetchStrategyList();
 
       const clientStrategies: number[] =
@@ -596,24 +608,17 @@ const ManualExecution: React.FC = () => {
     setTradeType((prev) => {
       const nextType = prev === "intraday" ? "positional" : "intraday";
 
-      // Instantly validate if switching TO intraday
       if (nextType === "intraday") {
+        // Automatically default to 15:27 without running the old validations
+        // that caused the "09:15" bug
         setEndTime("15:27");
-        let validatedEndTime = endTime;
 
-        if (validatedEndTime > "15:27") {
-          message.warning("Adjusted Squareoff time to max 15:27 for Intraday");
-          validatedEndTime = "15:27";
-          setEndTime(validatedEndTime);
-        }
-
-        if (validatedEndTime < startTime) {
-          message.error("Squareoff time cannot be less than Start time");
-          const safeTime = startTime > "15:27" ? "15:27" : startTime;
-          setEndTime(safeTime);
-          if (startTime > "15:27") setStartTime("15:27");
+        // Safety check: ensure Start Time isn't accidentally higher than 15:27
+        if (startTime > "15:27") {
+          setStartTime("15:27");
         }
       } else {
+        // Positional: Clear the squareoff time
         setEndTime("");
       }
 
@@ -1731,7 +1736,7 @@ const ManualExecution: React.FC = () => {
       // Positional boundaries: Between 09:15 and 15:27
       if (formattedValue < "09:15") {
         message.warning("Squareoff time cannot be earlier than 09:15");
-        formattedValue = "09:15";
+        formattedValue = "15:27";
       } else if (formattedValue > "15:27") {
         message.warning("Squareoff time cannot exceed 15:27");
         formattedValue = "15:27";
