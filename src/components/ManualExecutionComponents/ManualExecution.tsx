@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from "react";
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+
+import { CSS } from "@dnd-kit/utilities";
+import {
   Table,
   Card,
   Switch,
@@ -61,18 +77,55 @@ import { Form } from "antd";
 
 const EditableContext = createContext<any>(null);
 
-const EditableRow: React.FC<any> = ({ index, ...props }) => {
+// const EditableRow: React.FC<any> = ({ index, ...props }) => {
+//   const [form] = Form.useForm();
+
+//   return (
+//     <Form form={form} component={false}>
+//       <EditableContext.Provider value={form}>
+//         <tr {...props} />
+//       </EditableContext.Provider>
+//     </Form>
+//   );
+// };
+const CombinedRow: React.FC<any> = (props) => {
   const [form] = Form.useForm();
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: props["data-row-key"], // AntD passes the rowKey here
+  });
+
+  const style: React.CSSProperties = {
+    ...props.style,
+    transform: CSS.Transform.toString(transform),
+    transition,
+    cursor: isDragging ? "grabbing" : "move",
+    zIndex: isDragging ? 9999 : "auto",
+    position: isDragging ? "relative" : undefined,
+    userSelect: isDragging ? "none" : "auto",
+  };
 
   return (
     <Form form={form} component={false}>
       <EditableContext.Provider value={form}>
-        <tr {...props} />
+        <tr
+          {...props}
+          ref={setNodeRef}
+          style={style}
+          {...attributes}
+          {...listeners}
+        />
       </EditableContext.Provider>
     </Form>
   );
 };
-
 const EditableCell: React.FC<any> = ({
   title,
   editable,
@@ -163,6 +216,27 @@ interface ExecutionLeg {
   qty: number;
 }
 
+// const DraggableRow = (props: any) => {
+//   const { attributes, listeners, setNodeRef, transform, transition } =
+//     useSortable({ id: props["data-row-key"] });
+
+//   const style = {
+//     ...props.style,
+//     transform: CSS.Transform.toString(transform),
+//     transition,
+//     cursor: "move",
+//   };
+
+//   return (
+//     <tr
+//       ref={setNodeRef}
+//       style={style}
+//       {...attributes}
+//       {...listeners}
+//       {...props}
+//     />
+//   );
+// };
 
 const ManualExecution: React.FC = () => {
   const [data, setData] = useState<ManualExecutionRow[]>([]);
@@ -1442,6 +1516,19 @@ const ManualExecution: React.FC = () => {
       ...row,
     };
 
+    // ✅ VALIDATION
+    if (
+      updatedRow.entryLevel === undefined ||
+      updatedRow.entryLevel === null ||
+      updatedRow.entryLevel === "" ||
+      updatedRow.stoplossLevel === undefined ||
+      updatedRow.stoplossLevel === null ||
+      updatedRow.stoplossLevel === ""
+    ) {
+      message.error("Entry Level and Stoploss Level cannot be empty");
+      return; // ❌ Stop API call
+    }
+
     newData.splice(index, 1, updatedRow);
     setData(newData);
 
@@ -1462,9 +1549,9 @@ const ManualExecution: React.FC = () => {
         product_type: updatedRow.productType,
         entry_time: updatedRow.entryTime,
 
-        entry_level: Number(String(updatedRow.entryLevel).replace(/,/g, "")),
+        entry_level: Number(String(updatedRow.entryLevel).replace(/,/g, "-")),
         stoploss_level: Number(
-          String(updatedRow.stoplossLevel).replace(/,/g, ""),
+          String(updatedRow.stoplossLevel).replace(/,/g, "-"),
         ),
 
         enabled: updatedRow.status,
@@ -1495,6 +1582,46 @@ const ManualExecution: React.FC = () => {
     }
   };
 
+  // const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+  );
+  const handleDragEnd = async (event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = data.findIndex((i) => i.id === active.id);
+      const newIndex = data.findIndex((i) => i.id === over?.id);
+
+      const newData = arrayMove(data, oldIndex, newIndex);
+
+      setData(newData);
+
+      // 🔥 CALL API WITH NEW ORDER
+      try {
+        const movedRow = newData[newIndex];
+
+        const res = await reorderManualExecution(
+          movedRow.id,
+          newIndex + 1, // order position
+        );
+
+        if (res.data?.result) {
+          message.success(res.data.result);
+          fetchExecutions();
+        } else {
+          message.error("Failed to reorder");
+        }
+      } catch (error) {
+        console.error("Reorder API failed", error);
+        message.error("Failed to reorder");
+      }
+    }
+  };
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
@@ -1895,31 +2022,43 @@ const ManualExecution: React.FC = () => {
             </div>
           ) : (
             <Spin spinning={loading}>
-              <Table
-                components={{
-                  body: {
-                    row: EditableRow,
-                    cell: EditableCell,
-                  },
-                }}
-                size="small"
-                columns={mergedColumns}
-                dataSource={data}
-                pagination={false}
-                sticky
-                rowClassName={(record) => record.rowColor || ""}
-                tableLayout="fixed"
-                scroll={{ x: "max-content", y: "calc(100vh - 150px)" }}
-                className="manual-execution-table"
-                locale={{
-                  emptyText: (
-                    <Empty
-                      description="No Manual Executions Found"
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  ),
-                }}
-              />
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={data.map((i) => i.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <Table
+                    rowKey="id"
+                    components={{
+                      body: {
+                        row: CombinedRow,
+                        cell: EditableCell,
+                      },
+                    }}
+                    size="small"
+                    columns={mergedColumns}
+                    dataSource={data}
+                    pagination={false}
+                    sticky
+                    rowClassName={(record) => record.rowColor || ""}
+                    tableLayout="fixed"
+                    scroll={{ x: "max-content", y: "calc(100vh - 150px)" }}
+                    className="manual-execution-table"
+                    locale={{
+                      emptyText: (
+                        <Empty
+                          description="No Manual Executions Found"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        />
+                      ),
+                    }}
+                  />
+                </SortableContext>
+              </DndContext>
             </Spin>
           )}
         </div>

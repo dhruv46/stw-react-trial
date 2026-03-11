@@ -93,11 +93,8 @@ export const copyManualExecution = (id: number) => {
   return API.get(`/copy_manual_execution?manual_execution_id=${id}`);
 };
 
-export const reorderManualExecution = (
-  manual_execution_id: number,
-  order: number,
-) => {
+export const reorderManualExecution = (id: number, order: number) => {
   return API.get(
-    `/reorder_manual_execution_list?manual_execution_id=${manual_execution_id}&order=${order}`,
+    `/reorder_manual_execution_list?manual_execution_id=${id}&order=${order}`,
   );
 };
