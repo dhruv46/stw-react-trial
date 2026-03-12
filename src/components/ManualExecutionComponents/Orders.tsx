@@ -154,7 +154,7 @@ const Orders: React.FC = () => {
 
         {/* TABLE */}
         {isOpen && (
-          <div className="border-t border-gray-100 bg-white">
+          <div className="border-t border-gray-100 bg-white mt-2">
             <Table
               size="small"
               columns={columns}

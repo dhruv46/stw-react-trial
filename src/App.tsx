@@ -47,6 +47,7 @@ import Charges from "./pages/Settings/Charges";
 import BrokerageList from "./pages/Settings/BrokerageList";
 import AddBrokerage from "./pages/Settings/AddBrokerage";
 import ManualExecutionPage from "./pages/ManualExecutionPage";
+import AutoStrategy from "./pages/AutoStrategy";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -100,7 +101,7 @@ const router = createBrowserRouter([
       { path: "sim-trade-book", element: <TradeBook /> },
       { path: "trade-edit-mode", element: <TradeBook /> },
       { path: "manual-execution", element: <ManualExecutionPage /> },
-
+      { path: "auto-strategy", element: <AutoStrategy /> },
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
       { path: "markets", element: <Markets /> },

@@ -51,7 +51,7 @@ const nav: NavItem[] = [
       { to: "/download-report", label: "OHLC" },
     ],
   },
-  { to: "javascript:void(0)", label: "Auto Strategy" },
+  { to: "/auto-strategy", label: "Auto Strategy" },
   {
     label: "Settings",
     children: [
