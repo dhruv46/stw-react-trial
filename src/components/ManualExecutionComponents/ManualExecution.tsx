@@ -33,6 +33,7 @@ import {
   InputNumber,
   Popconfirm,
   Modal,
+  Checkbox,
 } from "antd";
 import type { ColumnsType, ColumnType } from "antd/es/table";
 import {
@@ -62,6 +63,9 @@ import {
   deleteManualExecutionById,
   copyManualExecution,
   reorderManualExecution,
+  getManualExecutionByPKId,
+  getClientMultiplierList,
+  insertUpdateClientMultiplier,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
@@ -295,7 +299,14 @@ const ManualExecution: React.FC = () => {
   const [enabled, setEnabled] = useState<boolean>(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-
+  const [tableTicks, setTableTicks] = useState<Record<string, any>>({});
+  const tableSubscribedRef = React.useRef<string[]>([]);
+  const [clientModalVisible, setClientModalVisible] = useState(false);
+  const [clientData, setClientData] = useState<any[]>([]);
+  const [clientModalId, setClientModalId] = useState<number | null>(null);
+  const [executionId, setExecutionId] = useState<number | null>(null);
+  const [selectedClients, setSelectedClients] = useState<number[]>([]);
+  const [executionData, setExecutionData] = useState<any>(null);
   const fetchExecutions = async () => {
     try {
       setLoading(true);
@@ -368,6 +379,41 @@ const ManualExecution: React.FC = () => {
   useEffect(() => {
     fetchExecutions();
   }, []);
+
+  // Subscribe to all underlying instruments loaded into the table
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+
+    const newTableInstruments = data
+      .map((row) => row.underlyingInstrumentId)
+      .filter((id) => id && !tableSubscribedRef.current.includes(id));
+
+    if (newTableInstruments.length === 0) return;
+
+    const uniqueNewInstruments = Array.from(new Set(newTableInstruments));
+
+    uniqueNewInstruments.forEach((inst) => {
+      const topic = `tick_message_${inst}`;
+      socketService.subscribe(topic, (body: any) => {
+        const inner =
+          typeof body.data === "string" ? JSON.parse(body.data) : body;
+
+        setTableTicks((prev) => ({
+          ...prev,
+          [inst]: {
+            Price: inner.Price,
+            ChangeValue: inner.ChangeValue,
+            PercentChange: inner.PercentChange,
+          },
+        }));
+      });
+    });
+
+    tableSubscribedRef.current = [
+      ...tableSubscribedRef.current,
+      ...uniqueNewInstruments,
+    ];
+  }, [data]);
 
   const fetchTagOptions = async (currentStrategyId?: number) => {
     try {
@@ -1432,8 +1478,32 @@ const ManualExecution: React.FC = () => {
     {
       title: "Underlying",
       dataIndex: "underlying",
-      width: 90,
+      width: 80,
       className: "text-[10px]",
+    },
+    {
+      title: "Price",
+      key: "price",
+      width: 70,
+      className: "text-[10px] font-bold",
+      render: (_, record) => {
+        const tick = tableTicks[record.underlyingInstrumentId];
+
+        // Show placeholder if socket hasn't returned a price yet
+        if (!tick || tick.Price === undefined) {
+          return <span className="text-gray-400">--</span>;
+        }
+
+        return (
+          <span
+            className={
+              tick.ChangeValue >= 0 ? "text-green-600" : "text-red-600"
+            }
+          >
+            {Number(tick.Price).toFixed(2)}
+          </span>
+        );
+      },
     },
     {
       title: "Entry",
@@ -1459,14 +1529,19 @@ const ManualExecution: React.FC = () => {
     {
       title: "Client",
       dataIndex: "client",
-      width: 50,
+      width: 40,
       align: "center",
-      render: () => <InfoCircleFilled className="text-blue-500 text-sm" />,
+      render: (_, record) => (
+        <InfoCircleFilled
+          className="text-blue-500 text-sm cursor-pointer"
+          onClick={() => openClientModal(record.id)}
+        />
+      ),
     },
     {
       title: "Status",
       dataIndex: "status",
-      width: 60,
+      width: 50,
       align: "center",
       render: (status: boolean, record) => (
         <Switch
@@ -1619,7 +1694,6 @@ const ManualExecution: React.FC = () => {
     }
   };
 
-  // const sensors = useSensors(useSensor(PointerSensor));
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -1745,6 +1819,241 @@ const ManualExecution: React.FC = () => {
 
     setEndTime(formattedValue);
   };
+
+  const openClientModal = async (id: number) => {
+    try {
+      setExecutionId(id);
+      setClientModalVisible(true);
+
+      const [clientRes, executionRes, multiplierRes] = await Promise.all([
+        getEnabledClientList(),
+        getManualExecutionByPKId(id),
+        getClientMultiplierList(id),
+      ]);
+
+      const clients = clientRes.data.result || [];
+      const multiplierList = multiplierRes.data.result || [];
+
+      const mapped = clients.map((client: any) => {
+        const multi = multiplierList.find((m: any) => m.id === client.id);
+
+        const execution = executionRes.data.result?.[0];
+
+        // store execution object
+        setExecutionData(execution);
+
+        return {
+          key: client.id,
+          client_id: client.id,
+          name: client.name,
+          broker: client.broker,
+          multiplier: multi?.client_multiplier,
+          enabled: multi?.client_enabled || false,
+        };
+      });
+
+      setClientData(mapped);
+    } catch (err) {
+      console.error("Client modal load failed", err);
+    }
+  };
+
+  const updateClientMultiplier = async (
+    clientId: number,
+    value: number,
+    enabled: boolean,
+  ) => {
+    try {
+      const updatedData = clientData.map((c) =>
+        c.client_id === clientId ? { ...c, multiplier: value } : c,
+      );
+
+      setClientData(updatedData);
+
+      const clientMultiplier: any = {};
+
+      updatedData.forEach((client) => {
+        if (client.multiplier !== undefined && client.multiplier !== null) {
+          clientMultiplier[client.client_id] = {
+            multiplier: client.multiplier,
+            enabled: client.enabled,
+          };
+        }
+      });
+
+      const payload = {
+        id: executionId,
+        client_multiplier: clientMultiplier,
+      };
+
+      const res = await insertUpdateClientMultiplier(payload);
+
+      if (res.data.result?.[0]) {
+        message.success(res.data.result[0]);
+      }
+    } catch (error) {
+      console.error("Multiplier update failed", error);
+    }
+  };
+
+  const handleMultiplierChange = async (id: number, value: number) => {
+    const client = clientData.find((c) => c.client_id === id);
+
+    const updated = clientData.map((c) =>
+      c.client_id === id ? { ...c, multiplier: value } : c,
+    );
+
+    setClientData(updated);
+
+    if (client) {
+      await updateClientMultiplier(id, value, client.enabled);
+    }
+  };
+  const handleApplyClientMultiplier = async () => {
+    try {
+      const clientMultiplier: any = {};
+
+      clientData.forEach((client) => {
+        if (client.enabled) {
+          clientMultiplier[client.client_id] = {
+            multiplier: client.multiplier,
+            enabled: client.enabled,
+          };
+        }
+      });
+
+      const payload = {
+        id: executionId,
+        client_multiplier: clientMultiplier,
+      };
+
+      const res = await insertUpdateClientMultiplier(payload);
+
+      if (res.data.result?.[0]) {
+        message.success(res.data.result[0]);
+      }
+
+      console.log(executionData);
+
+      // 2️⃣ Call postManualExecution with stored data
+      if (executionData) {
+        const executionPayload = {
+          id: executionData.id,
+          strategy_name: executionData.strategy_name,
+          instrument: executionData.instrument,
+          product_type: executionData.product_type,
+          entry_time: executionData.entry_time,
+          underlying_instrument: executionData.underlying_instrument,
+          underlying_instrument_id: executionData.underlying_instrument_id,
+          strategy_id: executionData.strategy_id,
+          entry_level: executionData.entry_level,
+          stoploss_level: executionData.stoploss_level,
+          enabled: executionData.enabled,
+          reset: !executionData.enabled,
+        };
+
+        const res = await postManualExecution(executionPayload);
+        if (res.data.result) {
+          message.success(res.data.result);
+        }
+      }
+
+      setClientModalVisible(false);
+    } catch (error) {
+      console.error("Apply client multiplier failed", error);
+    }
+  };
+
+  const clientColumns = [
+    {
+      title: (
+        <Checkbox
+          checked={clientData.length > 0 && clientData.every((c) => c.enabled)}
+          indeterminate={
+            clientData.some((c) => c.enabled) &&
+            !clientData.every((c) => c.enabled)
+          }
+          onChange={(e) => {
+            const checked = e.target.checked;
+
+            const updated = clientData.map((c) => ({
+              ...c,
+              enabled: checked,
+            }));
+
+            setClientData(updated);
+          }}
+        />
+      ),
+      dataIndex: "enabled",
+      width: 40,
+      render: (val: boolean, record: any) => (
+        <Checkbox
+          checked={val}
+          onChange={(e) => {
+            const updated = clientData.map((c) =>
+              c.client_id === record.client_id
+                ? { ...c, enabled: e.target.checked }
+                : c,
+            );
+            setClientData(updated);
+          }}
+        />
+      ),
+    },
+    {
+      title: "Client ID",
+      dataIndex: "client_id",
+    },
+    {
+      title: "Client Name",
+      dataIndex: "name",
+    },
+    {
+      title: "Broker",
+      dataIndex: "broker",
+    },
+    {
+      title: "Multiplier",
+      dataIndex: "multiplier",
+      render: (value: number, record: any) => {
+        const showInput =
+          clientModalId === record.client_id ||
+          value === 0 ||
+          value === undefined ||
+          value === null;
+
+        if (showInput) {
+          return (
+            <InputNumber
+              min={1}
+              autoFocus
+              value={value || undefined}
+              onPressEnter={(e) => {
+                const val = Number((e.target as HTMLInputElement).value);
+                handleMultiplierChange(record.client_id, val);
+                setClientModalId(null);
+              }}
+              // onBlur={(e) => {
+              //   const val = Number((e.target as HTMLInputElement).value);
+              //   handleMultiplierChange(record.client_id, val);
+              //   setClientModalId(null);
+              // }}
+            />
+          );
+        }
+
+        return (
+          <div
+            onDoubleClick={() => setClientModalId(record.client_id)}
+            className="cursor-pointer"
+          >
+            {value}x
+          </div>
+        );
+      },
+    },
+  ];
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
@@ -2229,6 +2538,28 @@ const ManualExecution: React.FC = () => {
             </Spin>
           )}
         </div>
+
+        <Modal
+          title="Client Multiplier"
+          open={clientModalVisible}
+          onCancel={() => setClientModalVisible(false)}
+          footer={null}
+          width={700}
+        >
+          <Table
+            columns={clientColumns}
+            dataSource={clientData}
+            pagination={false}
+            rowKey="client_id"
+          />
+
+          <div className="flex justify-center gap-3 mt-5">
+            <Button type="primary" onClick={handleApplyClientMultiplier}>
+              Apply
+            </Button>
+            <Button onClick={() => setClientModalVisible(false)}>Cancel</Button>
+          </div>
+        </Modal>
       </Card>
 
       <style>
@@ -2251,7 +2582,7 @@ const ManualExecution: React.FC = () => {
           .row-yellow td { background-color: #FFF8BA !important; }
           .row-white td { background-color: #ffffff !important; }
         .manual-execution-table .ant-table-thead > tr > th {
-         
+
           font-size: 10px;
           font-weight: 600;
           padding: 4px 4px;
@@ -2261,7 +2592,7 @@ const ManualExecution: React.FC = () => {
           font-size: 10px;
           white-space: nowrap;
         }
-      
+
         .manual-execution-table .ant-table-body::-webkit-scrollbar {
           width: 3px; height: 3px;
         }
@@ -2269,7 +2600,6 @@ const ManualExecution: React.FC = () => {
 
           border-radius: 3px;
         }
-        
 
         /* Container for the labeled field */
 .field-container {

@@ -98,3 +98,15 @@ export const reorderManualExecution = (id: number, order: number) => {
     `/reorder_manual_execution_list?manual_execution_id=${id}&order=${order}`,
   );
 };
+
+export const getManualExecutionByPKId = (id: number) => {
+  return API.get(`/get_manual_execution_by_pk_id?id=${id}`);
+};
+
+export const getClientMultiplierList = (id: number) => {
+  return API.get(`/fetch_client_multiplier_list?manual_execution_id=${id}`);
+};
+
+export const insertUpdateClientMultiplier = (payload: any) => {
+  return API.post("/insert_update_client_multiplier", payload);
+};
