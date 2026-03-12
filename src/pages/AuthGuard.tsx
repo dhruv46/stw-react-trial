@@ -54,6 +54,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         const cookieFullName = getCookie("full_name");
         const cookieEmail = getCookie("email");
         const cookieUsername = getCookie("username");
+        const cookieClientId = getCookie("client_id");
+
+        const clientId = user.user_clients?.[0];
 
         if (cookieFullName !== user.full_name) {
           setCookie("full_name", user.full_name);
@@ -67,6 +70,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           setCookie("username", user.username);
         }
 
+        // ✅ set client id cookie
+        if (clientId && cookieClientId !== String(clientId)) {
+          setCookie("client_id", String(clientId));
+        }
         setLoading(false);
 
         if (location.pathname === "/login" || location.pathname === "/forgot") {

@@ -110,3 +110,15 @@ export const getClientMultiplierList = (id: number) => {
 export const insertUpdateClientMultiplier = (payload: any) => {
   return API.post("/insert_update_client_multiplier", payload);
 };
+
+// --------------------------- OPEN POSITION API's --------------------------
+
+export const fetchManualPositionList = (id: any) => {
+  return API.get(`/fetch_manual_position_list?client_id=${id}`);
+};
+
+// --------------------------- ORDER BOOK API's --------------------------
+
+export const fetchOrderBook = (id: any, mode: any) => {
+  return API.get(`/manual_strategy_order_book?client_id=${id}&mode=${mode}`);
+};

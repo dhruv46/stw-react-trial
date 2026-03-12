@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Table, Card, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { UpOutlined, DownOutlined } from "@ant-design/icons";
+import { fetchManualPositionList } from "../../services/manualExecutionApi";
+import { getCookieData } from "../../hook/getCookieData";
 
 const { Text } = Typography;
 
@@ -18,28 +20,38 @@ interface OpenPositionRow {
 
 const OpenPositions: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
+  const [positions, setPositions] = useState<any[]>([]);
+  const clientId = Number(getCookieData("client_id"));
 
-  const [data] = useState<OpenPositionRow[]>([
-    {
-      key: 1,
-      strategy: "N_Man_2",
-      displayName: "NIFTY 10MAR2026 PE 24650",
-      qty: -65,
-      ltp: 216.45,
-      pnl: -14069.25,
-      chg: 0.0,
-    },
-    {
-      key: 2,
-      strategy: "N_Man_2",
-      displayName: "NIFTY 10MAR2026 CE 24650",
-      qty: 65,
-      ltp: 199.65,
-      pnl: 12977.25,
-      chg: 0.0,
-    },
-  ]);
+  useEffect(() => {
+    const loadPositions = async () => {
+      if (!clientId) return;
 
+      try {
+        const res = await fetchManualPositionList(clientId);
+
+        const result = res?.data?.result || [];
+
+        console.log("Manual Positions:", result); // print data
+
+        setPositions(result); // store data
+      } catch (error) {
+        console.error("Error fetching manual position list:", error);
+      }
+    };
+
+    loadPositions();
+  }, [clientId]);
+
+  const tableData: OpenPositionRow[] = positions.map((item, index) => ({
+    key: index,
+    strategy: item.name, // strategy column
+    displayName: item.DisplayName, // display name
+    qty: item.quantity, // quantity
+    ltp: item.ltp, // ltp
+    pnl: 0, // blank
+    chg: 0, // blank
+  }));
   const formatCurrency = (value: number) =>
     value.toLocaleString("en-IN", {
       minimumFractionDigits: 2,
@@ -136,10 +148,11 @@ const OpenPositions: React.FC = () => {
             <Table
               size="small"
               columns={columns}
-              dataSource={data}
+              dataSource={tableData}
               pagination={false}
               className="open-positions-table"
               scroll={{ x: "max-content" }}
+              locale={{ emptyText: "No data available" }}
             />
           </div>
         )}
@@ -158,7 +171,7 @@ const OpenPositions: React.FC = () => {
             font-weight: 600;
             padding: 4px 6px !important;
             color: #475569;
-            border-bottom: 1px solid #e2e8f0 !important;
+           
           }
 
           .open-positions-table .ant-table-thead > tr > th::before {

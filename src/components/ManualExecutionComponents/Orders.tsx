@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Table, Card, Typography, Switch } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { UpOutlined, DownOutlined } from "@ant-design/icons";
+import { fetchOrderBook } from "../../services/manualExecutionApi";
+import { getCookieData } from "../../hook/getCookieData";
 
 const { Text } = Typography;
 
-// --- TYPES ---
+/* ================= TYPES ================= */
+
 interface OrderRow {
   key: number;
   trade: string;
@@ -17,74 +20,50 @@ interface OrderRow {
 
 const Orders: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
-  const [isSimActive, setIsSimActive] = useState(true);
+  const [isSimActive, setIsSimActive] = useState(false);
+  const [data, setData] = useState<OrderRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [data] = useState<OrderRow[]>([
-    {
-      key: 1,
-      trade: "NIFTY 10MAR2026 PE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:24:00",
-      status: "Executed",
-    },
-    {
-      key: 2,
-      trade: "NIFTY 10MAR2026 CE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:24:00",
-      status: "Executed",
-    },
-    {
-      key: 3,
-      trade: "NIFTY 10MAR2026 PE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:22:06",
-      status: "Executed",
-    },
-    {
-      key: 4,
-      trade: "NIFTY 10MAR2026 CE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:22:06",
-      status: "Executed",
-    },
-    {
-      key: 5,
-      trade: "NIFTY 10MAR2026 PE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:18:02",
-      status: "Executed",
-    },
-    {
-      key: 6,
-      trade: "NIFTY 10MAR2026 CE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:18:02",
-      status: "Executed",
-    },
-    {
-      key: 7,
-      trade: "NIFTY 10MAR2026 PE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:15:43",
-      status: "Executed",
-    },
-    {
-      key: 8,
-      trade: "NIFTY 10MAR2026 CE 24650",
-      price: 0.0,
-      qty: 65,
-      orderDateTime: "06-03-2026 10:15:43",
-      status: "Executed",
-    },
-  ]);
+  const clientId = Number(getCookieData("client_id"));
+
+  /* ================= FETCH ORDER BOOK ================= */
+
+  const loadOrders = async () => {
+    if (!clientId) return;
+
+    const mode = isSimActive ? "sim" : "live";
+
+    try {
+      setLoading(true);
+
+      const res = await fetchOrderBook(clientId, mode);
+
+      const result = res?.data?.result || [];
+
+      const mapped = result.map((item: any) => ({
+        key: item.order_id,
+        trade: item.trade,
+        price: item.price,
+        qty: item.quantity,
+        orderDateTime: item.create_datetime,
+        status: item.status,
+      }));
+
+      setData(mapped);
+    } catch (error) {
+      console.error("Error fetching order book:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= EFFECT ================= */
+
+  useEffect(() => {
+    loadOrders();
+  }, [clientId, isSimActive]);
+
+  /* ================= TABLE COLUMNS ================= */
 
   const columns: ColumnsType<OrderRow> = [
     {
@@ -101,7 +80,7 @@ const Orders: React.FC = () => {
       align: "center",
       width: 50,
       className: "text-[10px]",
-      render: (val: number) => val.toFixed(2),
+      render: (val: number) => val?.toFixed(2),
     },
     {
       title: "Qty",
@@ -116,7 +95,7 @@ const Orders: React.FC = () => {
       dataIndex: "orderDateTime",
       key: "orderDateTime",
       align: "center",
-      width: 120,
+      width: 140,
       className: "text-[10px]",
     },
     {
@@ -124,7 +103,7 @@ const Orders: React.FC = () => {
       dataIndex: "status",
       key: "status",
       align: "center",
-      width: 60,
+      width: 80,
       className: "text-[10px]",
       render: (text: string) => (
         <span className="text-emerald-500 font-medium">{text}</span>
@@ -140,16 +119,20 @@ const Orders: React.FC = () => {
       >
         {/* HEADER */}
         <div
-          className="px-2 py-1 bg-white flex items-center justify-between cursor-pointer select-none"
+          className=" bg-white flex items-center justify-between cursor-pointer select-none"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <Text className="text-[11px] font-semibold text-gray-800">
+          <Text className="text-[15px] font-semibold text-gray-800">
             Orders
           </Text>
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <Text className="text-[10px] font-medium">SIM</Text>
+              <Text className="text-[10px] font-medium">
+                {" "}
+                {isSimActive ? "SIM" : "LIVE"}
+              </Text>
+
               <Switch
                 size="small"
                 checked={isSimActive}
@@ -160,6 +143,7 @@ const Orders: React.FC = () => {
                 }}
               />
             </div>
+
             {isOpen ? (
               <UpOutlined className="text-gray-600 text-[10px]" />
             ) : (
@@ -176,6 +160,8 @@ const Orders: React.FC = () => {
               columns={columns}
               dataSource={data}
               pagination={false}
+              loading={loading}
+              locale={{ emptyText: "No orders available" }}
               className="orders-table"
               scroll={{ y: 280 }}
             />
@@ -226,6 +212,7 @@ const Orders: React.FC = () => {
           width: 4px;
           height: 4px;
         }
+
         .orders-table .ant-table-body::-webkit-scrollbar-thumb {
           background: #cbd5e1;
           border-radius: 4px;
