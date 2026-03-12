@@ -151,7 +151,7 @@ const OpenPositions: React.FC = () => {
               dataSource={tableData}
               pagination={false}
               className="open-positions-table"
-              scroll={{ x: "max-content" }}
+              scroll={{ x: "max-content", y: 280 }}
               locale={{ emptyText: "No data available" }}
             />
           </div>

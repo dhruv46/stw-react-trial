@@ -105,9 +105,22 @@ const Orders: React.FC = () => {
       align: "center",
       width: 80,
       className: "text-[10px]",
-      render: (text: string) => (
-        <span className="text-emerald-500 font-medium">{text}</span>
-      ),
+      render: (text: string) => {
+        let colorClass = "";
+
+        if (text?.toLowerCase() === "executed") {
+          colorClass = "text-emerald-500";
+        } else if (text?.toLowerCase() === "pending") {
+          colorClass = "text-yellow-500";
+        } else if (
+          text?.toLowerCase() === "fail" ||
+          text?.toLowerCase() === "failed"
+        ) {
+          colorClass = "text-red-500";
+        }
+
+        return <span className={`${colorClass} font-medium`}>{text}</span>;
+      },
     },
   ];
 
@@ -163,7 +176,7 @@ const Orders: React.FC = () => {
               loading={loading}
               locale={{ emptyText: "No orders available" }}
               className="orders-table"
-              scroll={{ y: 280 }}
+              scroll={{ x: "max-content", y: 280 }}
             />
           </div>
         )}

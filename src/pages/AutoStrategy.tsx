@@ -65,7 +65,7 @@ export default function AutoStrategy() {
         <div className="flex items-center gap-2">
           <div className="border p-[2px] rounded">
             <LineChartOutlined
-              style={{ fontSize: "20px" }}
+              style={{ fontSize: "17px" }}
               className="text-blue-500 cursor-pointer"
             />
           </div>
@@ -186,15 +186,15 @@ export default function AutoStrategy() {
   background: #f8fafc !important;
   font-size: 11px;
   font-weight: 600;
-  padding: 5px 8px !important;
+  padding: 3px 6px !important;
   height: 32px;
 }
 
 /* BODY */
 
 .strategy-table .ant-table-tbody > tr > td {
-  padding: 4px 8px !important;
-  height: 30px;
+  padding: 3px 6px !important;
+  height: 26px;
   font-size: 11px;
 }
 

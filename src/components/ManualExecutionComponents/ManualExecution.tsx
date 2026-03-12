@@ -31,11 +31,10 @@ import {
   Row,
   Col,
   InputNumber,
-  Popconfirm,
   Modal,
   Checkbox,
 } from "antd";
-import type { ColumnsType, ColumnType } from "antd/es/table";
+import type { ColumnType } from "antd/es/table";
 import {
   PlusOutlined,
   CloseOutlined,
@@ -81,17 +80,6 @@ import { Form } from "antd";
 
 const EditableContext = createContext<any>(null);
 
-// const EditableRow: React.FC<any> = ({ index, ...props }) => {
-//   const [form] = Form.useForm();
-
-//   return (
-//     <Form form={form} component={false}>
-//       <EditableContext.Provider value={form}>
-//         <tr {...props} />
-//       </EditableContext.Provider>
-//     </Form>
-//   );
-// };
 const CombinedRow: React.FC<any> = (props) => {
   const [form] = Form.useForm();
 
@@ -220,28 +208,6 @@ interface ExecutionLeg {
   qty: number;
 }
 
-// const DraggableRow = (props: any) => {
-//   const { attributes, listeners, setNodeRef, transform, transition } =
-//     useSortable({ id: props["data-row-key"] });
-
-//   const style = {
-//     ...props.style,
-//     transform: CSS.Transform.toString(transform),
-//     transition,
-//     cursor: "move",
-//   };
-
-//   return (
-//     <tr
-//       ref={setNodeRef}
-//       style={style}
-//       {...attributes}
-//       {...listeners}
-//       {...props}
-//     />
-//   );
-// };
-
 const ManualExecution: React.FC = () => {
   const [data, setData] = useState<ManualExecutionRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -305,7 +271,6 @@ const ManualExecution: React.FC = () => {
   const [clientData, setClientData] = useState<any[]>([]);
   const [clientModalId, setClientModalId] = useState<number | null>(null);
   const [executionId, setExecutionId] = useState<number | null>(null);
-  const [selectedClients, setSelectedClients] = useState<number[]>([]);
   const [executionData, setExecutionData] = useState<any>(null);
   const fetchExecutions = async () => {
     try {
@@ -1495,11 +1460,7 @@ const ManualExecution: React.FC = () => {
         }
 
         return (
-          <span
-            className={
-              tick.ChangeValue >= 0 ? "text-green-600" : "text-red-600"
-            }
-          >
+          <span className={"text-gray-600"}>
             {Number(tick.Price).toFixed(2)}
           </span>
         );
@@ -1555,7 +1516,7 @@ const ManualExecution: React.FC = () => {
     {
       title: "Action",
       key: "action",
-      width: 120,
+      width: 70,
       render: (_, record) => {
         const icons =
           record.actionType === "pending"

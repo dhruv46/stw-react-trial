@@ -195,7 +195,7 @@ const Navbar: React.FC = () => {
 
         // Convert array into a key-value object like { "1_26000": {...}, "11_26065": {...} }
         const formattedData = result.reduce((acc: any, item: any) => {
-          acc[item.iifl] = {
+          acc[item.uiid] = {
             Price: item.ltp ?? 0,
             ChangeValue: item.ChangeValue ?? 0,
             PercentChange: item.PercentChange ?? 0,
