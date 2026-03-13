@@ -307,16 +307,12 @@ const ManualExecution: React.FC = () => {
 
             entryLevel:
               item.entry_level != null
-                ? Number(item.entry_level).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })
+                ? Number(item.entry_level).toLocaleString("en-IN")
                 : "-",
 
             stoplossLevel:
               item.stoploss_level != null
-                ? Number(item.stoploss_level).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })
+                ? Number(item.stoploss_level).toLocaleString("en-IN")
                 : "-",
 
             status: item.enabled,
@@ -1459,11 +1455,7 @@ const ManualExecution: React.FC = () => {
           return <span className="text-gray-400">--</span>;
         }
 
-        return (
-          <span className={"text-gray-600"}>
-            {Number(tick.Price).toFixed(2)}
-          </span>
-        );
+        return <span className={"text-gray-600"}>{Number(tick.Price)}</span>;
       },
     },
     {

@@ -52,11 +52,12 @@ const OpenPositions: React.FC = () => {
     pnl: 0, // blank
     chg: 0, // blank
   }));
-  const formatCurrency = (value: number) =>
-    value.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+  const formatCurrency = (value: number | null | undefined) => {
+    return (value ?? 0).toLocaleString("en-IN", {
+      style: "currency",
+      currency: "INR",
     });
+  };
 
   const columns: ColumnsType<OpenPositionRow> = [
     {
