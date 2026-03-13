@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
-  Input,
   Radio,
   Switch,
   TimePicker,
@@ -10,12 +9,57 @@ import {
   Col,
   Button,
   Divider,
+  Select,
+  Input,
 } from "antd";
 import dayjs from "dayjs";
+import {
+  searchInstrumentApi,
+  fetchConditionMap,
+} from "../services/autoStrategyApi";
 
 const { Text } = Typography;
+const { Option } = Select;
 
 export default function AddAutostrategy() {
+  const [options, setOptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [underlying, setUnderlying] = useState("equity");
+  const [multiLeg, setMultiLeg] = useState(false);
+
+  const [conditions, setConditions] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetchConditionMap();
+        setConditions(res?.data?.result || []);
+      } catch (error) {
+        console.error("Error fetching condition map:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+  // 🔎 Instrument Search
+  const handleSearchInstrument = async (value: string) => {
+    if (!value) return;
+
+    try {
+      setLoading(true);
+
+      const res = await searchInstrumentApi(value, "EQ");
+
+      const list = res?.data?.result || [];
+
+      setOptions(list);
+    } catch (err) {
+      console.error("Instrument search error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
       {/* HEADER */}
@@ -25,7 +69,6 @@ export default function AddAutostrategy() {
         <Button type="primary">Strategy List</Button>
       </div>
 
-      {/* MAIN GRID */}
       <Row gutter={[16, 16]}>
         {/* Instrument Settings */}
         <Col xs={24} xl={12}>
@@ -39,13 +82,28 @@ export default function AddAutostrategy() {
             className="shadow-sm"
           >
             <div className="space-y-4">
-              {/* Index */}
+              {/* 🔎 Instrument Search */}
               <div>
                 <Text className="text-xs text-gray-500">Index</Text>
-                <Input placeholder="Search instrument..." className="mt-1" />
-                <Text className="text-red-500 text-xs">
-                  Please select a stock
-                </Text>
+
+                <Select
+                  showSearch
+                  placeholder="Search instrument..."
+                  className="w-full mt-1"
+                  filterOption={false}
+                  onSearch={handleSearchInstrument}
+                  loading={loading}
+                  allowClear
+                >
+                  {options.map((item: any) => (
+                    <Select.Option
+                      key={item.instrument_id}
+                      value={item.instrument_id}
+                    >
+                      {item.DisplayName}
+                    </Select.Option>
+                  ))}
+                </Select>
               </div>
 
               <Divider className="my-2" />
@@ -57,7 +115,16 @@ export default function AddAutostrategy() {
                 </Text>
 
                 <Radio.Group
-                  defaultValue="equity"
+                  value={underlying}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setUnderlying(value);
+
+                    // Reset toggle when switching to equity/future
+                    if (value === "equity" || value === "future") {
+                      setMultiLeg(false);
+                    }
+                  }}
                   className="flex flex-wrap gap-4"
                 >
                   <Radio value="equity">Equity</Radio>
@@ -71,8 +138,16 @@ export default function AddAutostrategy() {
               {/* Toggles */}
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center gap-2">
-                  <Switch size="small" />
-                  <Text className="text-gray-600 text-sm">Single Leg</Text>
+                  <Switch
+                    size="small"
+                    checked={multiLeg}
+                    onChange={(val) => setMultiLeg(val)}
+                    disabled={underlying !== "index"} // disable for equity & future
+                  />
+
+                  <Text className="text-gray-600 text-sm">
+                    {multiLeg ? "Multi Leg" : "Single Leg"}
+                  </Text>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -96,7 +171,6 @@ export default function AddAutostrategy() {
             className="shadow-sm"
           >
             <div className="space-y-4">
-              {/* Strategy Type */}
               <div>
                 <Text className="text-xs text-gray-500 block mb-2">
                   Strategy Type
@@ -104,14 +178,12 @@ export default function AddAutostrategy() {
 
                 <Radio.Group defaultValue="intraday" buttonStyle="solid">
                   <Radio.Button value="intraday">Intraday</Radio.Button>
-
                   <Radio.Button value="positional">Positional</Radio.Button>
                 </Radio.Group>
               </div>
 
               <Divider className="my-2" />
 
-              {/* Entry Exit Time */}
               <Row gutter={12}>
                 <Col xs={24} sm={12}>
                   <Text className="text-xs text-gray-500 block mb-1">
@@ -156,7 +228,6 @@ export default function AddAutostrategy() {
       {/* ACTION BUTTONS */}
       <div className="flex justify-end gap-3 mt-5">
         <Button>Cancel</Button>
-
         <Button type="primary">Save Strategy</Button>
       </div>
     </div>
