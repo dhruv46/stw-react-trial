@@ -4,6 +4,7 @@ import type { ColumnsType } from "antd/es/table";
 import { UpOutlined, DownOutlined } from "@ant-design/icons";
 import { fetchManualPositionList } from "../../services/manualExecutionApi";
 import { getCookieData } from "../../hook/getCookieData";
+import eventBus from "../../utils/eventBus";
 
 const { Text } = Typography;
 
@@ -23,24 +24,41 @@ const OpenPositions: React.FC = () => {
   const [positions, setPositions] = useState<any[]>([]);
   const clientId = Number(getCookieData("client_id"));
 
+  const loadPositions = async () => {
+    if (!clientId) return;
+
+    try {
+      const res = await fetchManualPositionList(clientId);
+
+      const result = res?.data?.result || [];
+
+      setPositions(result);
+    } catch (error) {
+      console.error("Error fetching manual position list:", error);
+    }
+  };
   useEffect(() => {
-    const loadPositions = async () => {
-      if (!clientId) return;
+    loadPositions();
+  }, [clientId]);
 
-      try {
-        const res = await fetchManualPositionList(clientId);
+  useEffect(() => {
+    const refresh = () => loadPositions();
 
-        const result = res?.data?.result || [];
+    eventBus.on("ORDER_EXECUTED", refresh);
 
-        console.log("Manual Positions:", result); // print data
+    return () => eventBus.off("ORDER_EXECUTED", refresh);
+  }, [clientId]);
 
-        setPositions(result); // store data
-      } catch (error) {
-        console.error("Error fetching manual position list:", error);
-      }
+  useEffect(() => {
+    const refresh = () => {
+      loadPositions();
     };
 
-    loadPositions();
+    eventBus.on("SQUARE_OFF_ORDER", refresh);
+
+    return () => {
+      eventBus.off("SQUARE_OFF_ORDER", refresh);
+    };
   }, [clientId]);
 
   const tableData: OpenPositionRow[] = positions.map((item, index) => ({
@@ -56,6 +74,7 @@ const OpenPositions: React.FC = () => {
     return (value ?? 0).toLocaleString("en-IN", {
       style: "currency",
       currency: "INR",
+      maximumFractionDigits: 0,
     });
   };
 

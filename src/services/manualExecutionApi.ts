@@ -111,6 +111,10 @@ export const insertUpdateClientMultiplier = (payload: any) => {
   return API.post("/insert_update_client_multiplier", payload);
 };
 
+export const squareOffManualExecution = (id: number) => {
+  return API.post(`/level_square_off?level_id=${id}`);
+};
+
 // --------------------------- OPEN POSITION API's --------------------------
 
 export const fetchManualPositionList = (id: any) => {

@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   useLocation,
   createBrowserRouter,
   RouterProvider,
   Outlet,
 } from "react-router-dom";
+import eventBus from "./utils/eventBus";
+import { message } from "antd";
 
 import Holdings from "./pages/Holdings";
 import Positions from "./pages/Positions";
@@ -48,15 +50,38 @@ import BrokerageList from "./pages/Settings/BrokerageList";
 import AddBrokerage from "./pages/Settings/AddBrokerage";
 import ManualExecutionPage from "./pages/ManualExecutionPage";
 import AutoStrategy from "./pages/AutoStrategy";
+import AddAutostrategy from "./pages/AddAutostrategy";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const subscribed = useRef(false);
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };
   useEffect(() => {
     socketService.connect();
+  }, []);
+
+  useEffect(() => {
+    if (subscribed.current) return;
+    subscribed.current = true;
+
+    const callback = (data: any) => {
+      const parsed = JSON.parse(data.data || "{}");
+
+      if (parsed.status === "success") {
+        message.success(parsed.description || "Order executed");
+        eventBus.emit("ORDER_EXECUTED");
+      }
+    };
+
+    socketService.subscribe("placed_order_notification", callback);
+
+    return () => {
+      socketService.unsubscribe("placed_order_notification", callback);
+      subscribed.current = false;
+    };
   }, []);
 
   return (
@@ -102,6 +127,7 @@ const router = createBrowserRouter([
       { path: "trade-edit-mode", element: <TradeBook /> },
       { path: "manual-execution", element: <ManualExecutionPage /> },
       { path: "auto-strategy", element: <AutoStrategy /> },
+      { path: "add-auto-strategy", element: <AddAutostrategy /> },
       { path: "funds", element: <Funds /> },
       { path: "watchlists", element: <Watchlists /> },
       { path: "markets", element: <Markets /> },

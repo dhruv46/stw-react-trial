@@ -65,6 +65,7 @@ import {
   getManualExecutionByPKId,
   getClientMultiplierList,
   insertUpdateClientMultiplier,
+  squareOffManualExecution,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
@@ -77,6 +78,7 @@ const { Option } = Select;
 
 import { createContext, useContext } from "react";
 import { Form } from "antd";
+import eventBus from "../../utils/eventBus";
 
 const EditableContext = createContext<any>(null);
 
@@ -154,7 +156,7 @@ const EditableCell: React.FC<any> = ({
           controls={false}
           style={{ width: "100%", fontSize: "10px", height: "18px" }}
           onPressEnter={save}
-          onBlur={save}
+          onBlur={() => setEditing(false)}
         />
       </Form.Item>
     ) : (
@@ -180,6 +182,8 @@ interface ManualExecutionRow {
   isEntryLevelHighlighted?: boolean;
   stoplossLevel: string | number;
   status: boolean;
+  is_position: boolean; // ⭐ add
+
   actionType: "pending" | "active";
   isRowHighlighted?: boolean;
   strategy_id: number;
@@ -272,6 +276,15 @@ const ManualExecution: React.FC = () => {
   const [clientModalId, setClientModalId] = useState<number | null>(null);
   const [executionId, setExecutionId] = useState<number | null>(null);
   const [executionData, setExecutionData] = useState<any>(null);
+
+  useEffect(() => {
+    const refresh = () => fetchExecutions();
+
+    eventBus.on("ORDER_EXECUTED", refresh);
+
+    return () => eventBus.off("ORDER_EXECUTED", refresh);
+  }, []);
+
   const fetchExecutions = async () => {
     try {
       setLoading(true);
@@ -318,6 +331,8 @@ const ManualExecution: React.FC = () => {
             status: item.enabled,
             actionType: item.is_position ? "pending" : "active",
 
+            is_position: item.is_position, // ⭐ ADD THIS
+
             rowColor,
           };
         },
@@ -340,6 +355,23 @@ const ManualExecution: React.FC = () => {
   useEffect(() => {
     fetchExecutions();
   }, []);
+
+  const handleSquareOff = async (id: number) => {
+    try {
+      const res = await squareOffManualExecution(id);
+      console.log("Square off response:", res);
+
+      message.success("Square off successful");
+
+      // refresh manual execution
+      fetchExecutions();
+
+      // notify other pages
+      eventBus.emit("SQUARE_OFF_ORDER"); // ✅ emit custom event
+    } catch (err) {
+      message.error("Square off failed");
+    }
+  };
 
   // Subscribe to all underlying instruments loaded into the table
   useEffect(() => {
@@ -1469,7 +1501,15 @@ const ManualExecution: React.FC = () => {
             {val}
           </span>
         ) : (
-          <span className="text-[10px]">{val}</span>
+          <span
+            className={
+              record.is_position
+                ? "text-gray-400 py-0.5 px-1 bg-gray-200 rounded "
+                : "text-[10px]"
+            }
+          >
+            {val}
+          </span>
         ),
     },
     {
@@ -1500,6 +1540,7 @@ const ManualExecution: React.FC = () => {
         <Switch
           checked={status}
           size="small"
+          disabled={record.is_position} // ⭐ disable if position exists
           className={status ? "bg-blue-600" : "bg-gray-300"}
           onChange={(checked) => handleToggleStatus(record.id, checked)}
         />
@@ -1516,6 +1557,7 @@ const ManualExecution: React.FC = () => {
                 <CloseOutlined
                   key="close"
                   className="text-red-500 text-sm cursor-pointer"
+                  onClick={() => handleSquareOff(record.id)}
                 />,
                 <CheckCircleFilled
                   key="check"
@@ -1917,10 +1959,107 @@ const ManualExecution: React.FC = () => {
     }
   };
 
+  // const clientColumns = [
+  //   {
+  //     title: (
+  //       <Checkbox
+  //         checked={clientData.length > 0 && clientData.every((c) => c.enabled)}
+  //         indeterminate={
+  //           clientData.some((c) => c.enabled) &&
+  //           !clientData.every((c) => c.enabled)
+  //         }
+  //         onChange={(e) => {
+  //           const checked = e.target.checked;
+
+  //           const updated = clientData.map((c) => ({
+  //             ...c,
+  //             enabled: checked,
+  //           }));
+
+  //           setClientData(updated);
+  //         }}
+  //       />
+  //     ),
+  //     dataIndex: "enabled",
+  //     width: 40,
+  //     render: (val: boolean, record: any) => (
+  //       console.log(record),
+  //       (
+  //         <Checkbox
+  //           checked={val}
+  //           disabled={record.is_position} // ⭐ disable
+  //           onChange={(e) => {
+  //             const updated = clientData.map((c) =>
+  //               c.client_id === record.client_id
+  //                 ? { ...c, enabled: e.target.checked }
+  //                 : c,
+  //             );
+  //             setClientData(updated);
+  //           }}
+  //         />
+  //       )
+  //     ),
+  //   },
+  //   {
+  //     title: "Client ID",
+  //     dataIndex: "client_id",
+  //   },
+  //   {
+  //     title: "Client Name",
+  //     dataIndex: "name",
+  //   },
+  //   {
+  //     title: "Broker",
+  //     dataIndex: "broker",
+  //   },
+  //   {
+  //     title: "Multiplier",
+  //     dataIndex: "multiplier",
+  //     render: (value: number, record: any) => {
+  //       const showInput =
+  //         clientModalId === record.client_id ||
+  //         value === 0 ||
+  //         value === undefined ||
+  //         value === null;
+
+  //       if (showInput) {
+  //         return (
+  //           <InputNumber
+  //             min={1}
+  //             autoFocus
+  //             value={value || undefined}
+  //             onPressEnter={(e) => {
+  //               const val = Number((e.target as HTMLInputElement).value);
+  //               handleMultiplierChange(record.client_id, val);
+  //               setClientModalId(null);
+  //             }}
+  //             // onBlur={(e) => {
+  //             //   const val = Number((e.target as HTMLInputElement).value);
+  //             //   handleMultiplierChange(record.client_id, val);
+  //             //   setClientModalId(null);
+  //             // }}
+  //           />
+  //         );
+  //       }
+
+  //       return (
+  //         <div
+  //           onDoubleClick={() => setClientModalId(record.client_id)}
+  //           className="cursor-pointer"
+  //         >
+  //           {value}x
+  //         </div>
+  //       );
+  //     },
+  //   },
+  // ];
+
   const clientColumns = [
     {
       title: (
         <Checkbox
+          // ⭐ 1. Check the main table data directly to see if it's a position
+          disabled={data.find((d) => d.id === executionId)?.is_position}
           checked={clientData.length > 0 && clientData.every((c) => c.enabled)}
           indeterminate={
             clientData.some((c) => c.enabled) &&
@@ -1928,12 +2067,10 @@ const ManualExecution: React.FC = () => {
           }
           onChange={(e) => {
             const checked = e.target.checked;
-
             const updated = clientData.map((c) => ({
               ...c,
               enabled: checked,
             }));
-
             setClientData(updated);
           }}
         />
@@ -1943,6 +2080,8 @@ const ManualExecution: React.FC = () => {
       render: (val: boolean, record: any) => (
         <Checkbox
           checked={val}
+          // ⭐ 2. Disable individual checkboxes using main table data
+          disabled={data.find((d) => d.id === executionId)?.is_position}
           onChange={(e) => {
             const updated = clientData.map((c) =>
               c.client_id === record.client_id
@@ -1970,6 +2109,18 @@ const ManualExecution: React.FC = () => {
       title: "Multiplier",
       dataIndex: "multiplier",
       render: (value: number, record: any) => {
+        // ⭐ 3. Determine if it's a position from the main table data
+        const isPosition = data.find((d) => d.id === executionId)?.is_position;
+
+        // Block editing entirely if it is a position
+        if (isPosition) {
+          return (
+            <div className="text-gray-400 cursor-not-allowed">
+              {value !== undefined && value !== null ? `${value}x` : "0x"}
+            </div>
+          );
+        }
+
         const showInput =
           clientModalId === record.client_id ||
           value === 0 ||
@@ -1987,11 +2138,6 @@ const ManualExecution: React.FC = () => {
                 handleMultiplierChange(record.client_id, val);
                 setClientModalId(null);
               }}
-              // onBlur={(e) => {
-              //   const val = Number((e.target as HTMLInputElement).value);
-              //   handleMultiplierChange(record.client_id, val);
-              //   setClientModalId(null);
-              // }}
             />
           );
         }
@@ -2007,6 +2153,7 @@ const ManualExecution: React.FC = () => {
       },
     },
   ];
+
   return (
     <div className=" bg-gray-50 p-1 flex flex-col">
       <Card
@@ -2506,12 +2653,17 @@ const ManualExecution: React.FC = () => {
             rowKey="client_id"
           />
 
-          <div className="flex justify-center gap-3 mt-5">
-            <Button type="primary" onClick={handleApplyClientMultiplier}>
-              Apply
-            </Button>
-            <Button onClick={() => setClientModalVisible(false)}>Cancel</Button>
-          </div>
+          {/* ⭐ Conditionally render the buttons based on is_position */}
+          {!data.find((d) => d.id === executionId)?.is_position && (
+            <div className="flex justify-center gap-3 mt-5">
+              <Button type="primary" onClick={handleApplyClientMultiplier}>
+                Apply
+              </Button>
+              <Button onClick={() => setClientModalVisible(false)}>
+                Cancel
+              </Button>
+            </div>
+          )}
         </Modal>
       </Card>
 

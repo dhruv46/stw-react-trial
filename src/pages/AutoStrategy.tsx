@@ -139,7 +139,7 @@ export default function AutoStrategy() {
               type="primary"
               icon={<PlusOutlined />}
               className="bg-blue-600 font-semibold"
-              onClick={() => navigate("/add-strategy")}
+              onClick={() => navigate("/add-auto-strategy")}
             >
               Add New Strategy
             </Button>

@@ -55,6 +55,9 @@ export default function Home() {
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []);
+  const formatNumber = (v: number | null | undefined) => {
+    return (v ?? 0).toFixed(2);
+  };
 
   /* ================= Columns ================= */
 
@@ -83,19 +86,19 @@ export default function Home() {
         title: "LTP",
         dataIndex: "ltp",
         align: "right",
-        render: (v) => v.toFixed(2),
+        render: (v) => formatNumber(v),
       },
       {
         title: "Buy",
         dataIndex: "last_trade_price",
         align: "right",
-        render: (v) => v.toFixed(2),
+        render: (v) => formatNumber(v),
       },
       {
         title: "Sell",
         dataIndex: "sell_value",
         align: "right",
-        render: (v) => v.toFixed(2),
+        render: (v) => formatNumber(v),
       },
       {
         title: "P&L",
@@ -105,7 +108,7 @@ export default function Home() {
 
           return (
             <span className={pnl >= 0 ? "text-green-600" : "text-red-600"}>
-              {pnl.toFixed(2)}
+              {formatNumber(pnl)}
             </span>
           );
         },
@@ -116,7 +119,7 @@ export default function Home() {
         align: "right",
         render: (v) => (
           <span className={v >= 0 ? "text-green-600" : "text-red-600"}>
-            {v.toFixed(2)}%
+            {formatNumber(v)}%
           </span>
         ),
       },
