@@ -81,9 +81,12 @@ import { Form } from "antd";
 import eventBus from "../../utils/eventBus";
 
 const EditableContext = createContext<any>(null);
-
-const CombinedRow: React.FC<any> = (props) => {
+const CombinedRow: React.FC<any> = ({ data, ...props }) => {
   const [form] = Form.useForm();
+
+  const id = props["data-row-key"];
+
+  const record = data.find((item: any) => item.id === id);
 
   const {
     attributes,
@@ -93,14 +96,19 @@ const CombinedRow: React.FC<any> = (props) => {
     transition,
     isDragging,
   } = useSortable({
-    id: props["data-row-key"], // AntD passes the rowKey here
+    id,
+    disabled: record?.is_position, // ✅ now works
   });
 
   const style: React.CSSProperties = {
     ...props.style,
     transform: CSS.Transform.toString(transform),
     transition,
-    cursor: isDragging ? "grabbing" : "move",
+    cursor: record?.is_position
+      ? "not-allowed"
+      : isDragging
+        ? "grabbing"
+        : "move",
     zIndex: isDragging ? 9999 : "auto",
     position: isDragging ? "relative" : undefined,
     userSelect: isDragging ? "none" : "auto",
@@ -113,8 +121,8 @@ const CombinedRow: React.FC<any> = (props) => {
           {...props}
           ref={setNodeRef}
           style={style}
-          {...attributes}
-          {...listeners}
+          {...(!record?.is_position ? attributes : {})}
+          {...(!record?.is_position ? listeners : {})}
         />
       </EditableContext.Provider>
     </Form>
@@ -2604,14 +2612,16 @@ const ManualExecution: React.FC = () => {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={data.map((i) => i.id)}
+                  items={data.filter((i) => !i.is_position).map((i) => i.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <Table
                     rowKey="id"
                     components={{
                       body: {
-                        row: CombinedRow,
+                        row: (props: any) => (
+                          <CombinedRow {...props} data={data} />
+                        ),
                         cell: EditableCell,
                       },
                     }}
