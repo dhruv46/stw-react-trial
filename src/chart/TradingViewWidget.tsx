@@ -409,6 +409,7 @@ const TradingChart = () => {
 
   const instrumentKey = location.state?.instrumentKey;
   const symbol = location.state?.symbol;
+  const series = location.state?.series;
 
   const [selectedInstrument, setSelectedInstrument] = useState(instrumentKey);
 
@@ -638,7 +639,9 @@ const TradingChart = () => {
       {/* OHLC Legend Overlay */}
       {displayCandle && (
         <div style={legendWrapper}>
-          <div style={symbolStyle}>{symbol}</div>
+          <div style={symbolStyle}>
+            {symbol} • {series}
+          </div>
           <div style={legendStyle}>
             <div style={legendItemStyle}>
               <span style={labelStyle}>O</span>
@@ -677,8 +680,13 @@ const TradingChart = () => {
 
       {/* Error Overlay */}
       {isError && (
-        <div style={overlayStyle}>
-          <span>Failed to load data. Please refresh.</span>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90">
+          <div className="max-w-md text-center bg-white border border-gray-200 shadow-md rounded-lg px-6 py-4">
+            <span className="text-sm font-medium text-gray-700 leading-relaxed">
+              Due to a temporary issue, we are unable to fetch and load the
+              chart data. Please try again after some time.
+            </span>
+          </div>
         </div>
       )}
 
