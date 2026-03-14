@@ -19,6 +19,7 @@
     "dayjs": "^1.11.19",
     "flowbite": "^4.0.1",
     "flowbite-react": "^0.12.17",
+    "lightweight-charts": "^5.1.0",
     "lucide-react": "^0.462.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

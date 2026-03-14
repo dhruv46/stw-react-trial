@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   ChevronUp,
@@ -32,6 +32,7 @@ interface LeftRailProps {
 export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
   const location = useLocation(); // ✅ get current path
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [active, setActive] = useState("1");
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -509,11 +510,11 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                         >
                           <span>({s.change.toFixed(2)}%)</span>
 
-                          {s.change >= 0 ? (
+                          {/* {s.change >= 0 ? (
                             <ChevronUp size={14} />
                           ) : (
                             <ChevronDown size={14} />
-                          )}
+                          )} */}
                         </div>
                       </div>
                     </div>
@@ -556,7 +557,20 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                       )}
 
                       {/* CHART ICON (COMMON) */}
-                      <button className="p-1 rounded hover:bg-neutral-200">
+                      <button
+                        className="p-1 rounded hover:bg-neutral-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+
+                          navigate("/chart", {
+                            state: {
+                              instrumentKey: s.instrumentKey,
+                              symbol: s.symbol,
+                              series: s.series,
+                            },
+                          });
+                        }}
+                      >
                         <ChartCandlestick size={15} className="text-blue-500" />
                       </button>
 

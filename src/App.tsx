@@ -16,7 +16,6 @@ import Markets from "./pages/Markets";
 import Login from "./pages/Login";
 import Forgot from "./pages/Forgot";
 import Topbar from "./components/Navbar";
-
 import LeftRail from "./components/LeftRail";
 import AuthGuard from "./pages/AuthGuard";
 import SimOrderBook from "./pages/SimOrderBook";
@@ -51,6 +50,7 @@ import AddBrokerage from "./pages/Settings/AddBrokerage";
 import ManualExecutionPage from "./pages/ManualExecutionPage";
 import AutoStrategy from "./pages/AutoStrategy";
 import AddAutostrategy from "./pages/AddAutostrategy";
+import TradingChart from "./chart/TradingViewWidget";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -138,6 +138,7 @@ const router = createBrowserRouter([
       { path: "edit-holiday/:id", element: <AddHoliday /> },
       { path: "exceptional-setting", element: <ExceptionalHoliday /> },
       { path: "add-exceptional-holiday", element: <AddExceptionalHoliday /> },
+      { path: "chart", element: <TradingChart /> },
       {
         path: "edit-exceptional-holiday/:id",
         element: <AddExceptionalHoliday />,
