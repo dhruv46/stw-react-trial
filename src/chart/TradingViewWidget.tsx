@@ -169,11 +169,63 @@ const TradingChart = () => {
     setIsInitialLoading(true);
     setIsError(false);
 
+    // const chart = createChart(containerRef.current, {
+    //   layout: {
+    //     background: { type: ColorType.Solid, color: "#ffffff" },
+    //     textColor: "#191919",
+    //     attributionLogo: false,
+    //   },
+    //   grid: {
+    //     vertLines: { color: "#e1e3e6", style: 1 },
+    //     horzLines: { color: "#e1e3e6", style: 1 },
+    //   },
+    //   crosshair: {
+    //     mode: CrosshairMode.Normal,
+    //     vertLine: { color: "#9094a6", labelBackgroundColor: "#191919" },
+    //     horzLine: { color: "#9094a6", labelBackgroundColor: "#191919" },
+    //   },
+    //   timeScale: {
+    //     borderColor: "#e1e3e6",
+    //     timeVisible: true,
+    //     rightOffset: 12,
+    //   },
+    //   rightPriceScale: { borderColor: "#e1e3e6" },
+    // });
+
     const chart = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "#ffffff" },
         textColor: "#191919",
         attributionLogo: false,
+      },
+      localization: {
+        timeFormatter: (time: number) => {
+          const date = new Date(time * 1000);
+
+          const day = date.getDate().toString().padStart(2, "0");
+          const months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ];
+          const month = months[date.getMonth()];
+          const year = date.getFullYear().toString().slice(-2); // Gets "26" from 2026
+
+          const hours = date.getHours().toString().padStart(2, "0");
+          const minutes = date.getMinutes().toString().padStart(2, "0");
+
+          // Returns exactly: "16 Mar '26   09:57"
+          return `${day} ${month} '${year}   ${hours}:${minutes}`;
+        },
       },
       grid: {
         vertLines: { color: "#e1e3e6", style: 1 },
@@ -184,11 +236,28 @@ const TradingChart = () => {
         vertLine: { color: "#9094a6", labelBackgroundColor: "#191919" },
         horzLine: { color: "#9094a6", labelBackgroundColor: "#191919" },
       },
+      // ==========================================
+      // NEW: Custom TimeScale Formatting
+      // ==========================================
       timeScale: {
         borderColor: "#e1e3e6",
         timeVisible: true,
+        secondsVisible: false, // Ensure seconds are hidden
         rightOffset: 12,
+        tickMarkFormatter: (
+          time: number,
+          tickMarkType: number,
+          locale: string,
+        ) => {
+          // Convert the UNIX timestamp (in seconds) to a JS Date object
+          const date = new Date(time * 1000);
+          const hours = date.getHours().toString().padStart(2, "0");
+          const minutes = date.getMinutes().toString().padStart(2, "0");
+          // Return exactly what you see in the image: "13:30"
+          return `${hours}:${minutes}`;
+        },
       },
+      // ==========================================
       rightPriceScale: { borderColor: "#e1e3e6" },
     });
 
