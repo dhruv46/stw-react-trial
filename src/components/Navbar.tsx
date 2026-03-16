@@ -102,7 +102,7 @@ const Navbar: React.FC = () => {
       PercentChange: number;
     } | null;
   }>({
-    "260000101190007": null, // NIFTY
+    "260000101000701": null, // NIFTY
     "260650101190001": null, // SENSEX
   });
 
@@ -164,10 +164,10 @@ const Navbar: React.FC = () => {
   // }, []);
 
   // instrument 1
-  useSocket("tick_message_260000101190007", (inner) => {
+  useSocket("tick_message_260000101000701", (inner) => {
     setMarketData((prev) => ({
       ...prev,
-      ["260000101190007"]: {
+      ["260000101000701"]: {
         Price: inner.Price,
         ChangeValue: inner.ChangeValue,
         PercentChange: inner.PercentChange,
@@ -271,13 +271,13 @@ const Navbar: React.FC = () => {
               </span>
               <div className="flex items-center gap-3 tabular-nums">
                 <span
-                  className={`font-semibold ${marketData["260000101190007"]?.PercentChange! >= 0 ? "text-green-600" : "text-red-600"}`}
+                  className={`font-semibold ${marketData["260000101000701"]?.PercentChange! >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
-                  {marketData["260000101190007"]?.Price?.toFixed(2) ?? "0.00"}
+                  {marketData["260000101000701"]?.Price?.toFixed(2) ?? "0.00"}
                 </span>
                 <span className="text-gray-500">
-                  {marketData["260000101190007"]
-                    ? `${marketData["260000101190007"]?.ChangeValue?.toFixed(2)} (${marketData["260000101190007"]?.PercentChange?.toFixed(2)}%)`
+                  {marketData["260000101000701"]
+                    ? `${marketData["260000101000701"]?.ChangeValue?.toFixed(2)} (${marketData["260000101000701"]?.PercentChange?.toFixed(2)}%)`
                     : "0.00 (0.00%)"}
                 </span>
               </div>
