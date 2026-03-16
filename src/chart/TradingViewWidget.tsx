@@ -11,6 +11,7 @@
 // } from "lightweight-charts";
 // import { fetchOHLCPrice } from "../services/tradingChartApi";
 // import Loader from "../components/Loader";
+// import { useSocket } from "../hook/useSocket";
 
 // interface ApiCandle {
 //   ts: number;
@@ -37,6 +38,7 @@
 
 //   const instrumentKey = location.state?.instrumentKey;
 //   const symbol = location.state?.symbol;
+//   const series = location.state?.series;
 
 //   const [selectedInstrument, setSelectedInstrument] = useState(instrumentKey);
 
@@ -53,6 +55,57 @@
 //   // Legend State
 //   const [hoveredCandle, setHoveredCandle] = useState<LegendData | null>(null);
 //   const [latestCandle, setLatestCandle] = useState<LegendData | null>(null);
+
+//   const chartSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+
+//   const topic = selectedInstrument ? `tick_message_${selectedInstrument}` : "";
+//   useSocket(topic, (tick) => {
+//     if (!tick || !allDataRef.current.length) return;
+
+//     const price = tick.Price;
+//     const time = tick.Time;
+
+//     const lastCandle = allDataRef.current[allDataRef.current.length - 1];
+
+//     if (!lastCandle) return;
+
+//     const candleTime = lastCandle.time as number;
+
+//     const candleDuration = 60; // timeframe
+
+//     // same candle
+//     if (time < candleTime + candleDuration) {
+//       const updatedCandle = {
+//         ...lastCandle,
+//         close: price,
+//         high: Math.max(lastCandle.high, price),
+//         low: Math.min(lastCandle.low, price),
+//       };
+
+//       allDataRef.current[allDataRef.current.length - 1] = updatedCandle;
+
+//       // update chart
+//       chartSeriesRef.current?.update(updatedCandle);
+
+//       setLatestCandle(updatedCandle);
+//     }
+//     // new candle
+//     else {
+//       const newCandle = {
+//         time: time as any,
+//         open: price,
+//         high: price,
+//         low: price,
+//         close: price,
+//       };
+
+//       allDataRef.current.push(newCandle);
+
+//       chartSeriesRef.current?.update(newCandle);
+
+//       setLatestCandle(newCandle);
+//     }
+//   });
 
 //   // Sync selected instrument with router state
 //   useEffect(() => {
@@ -110,6 +163,7 @@
 //       wickUpColor: "#089981",
 //       wickDownColor: "#f23645",
 //     });
+//     chartSeriesRef.current = candleSeries;
 
 //     // 4. Setup Auto-Resizing
 //     const handleResize = () => {
@@ -125,7 +179,6 @@
 
 //     // --- Helper function to fetch & format ---
 //     const fetchCandles = async (page: number) => {
-//       // console.log("Fetching instrument:", selectedInstrument);
 //       const res = await fetchOHLCPrice({
 //         instrument: selectedInstrument,
 //         timeframe: 60,
@@ -234,7 +287,24 @@
 //       resizeObserver.disconnect();
 //       chart.remove(); // Safely destroy the canvas
 //     };
-//   }, [selectedInstrument]); // <--- CRITICAL: Triggers rebuild on instrument change
+//   }, [selectedInstrument]);
+
+//   // ==========================================
+//   // NEW: EMPTY STATE CHECK
+//   // If there is no instrument selected, show this UI instead of the chart
+//   // ==========================================
+//   if (!selectedInstrument) {
+//     return (
+//       <div style={emptyStateStyle}>
+//         <h2 style={{ fontSize: "20px", marginBottom: "8px", fontWeight: 600 }}>
+//           No Instrument Selected
+//         </h2>
+//         <p style={{ color: "#6b7280", fontSize: "14px" }}>
+//           Please select a trading instrument to view its chart data.
+//         </p>
+//       </div>
+//     );
+//   }
 
 //   // UI Render Logic
 //   const displayCandle = hoveredCandle || latestCandle;
@@ -250,7 +320,9 @@
 //       {/* OHLC Legend Overlay */}
 //       {displayCandle && (
 //         <div style={legendWrapper}>
-//           <div style={symbolStyle}>{symbol}</div>
+//           <div style={symbolStyle}>
+//             {symbol} • {series}
+//           </div>
 //           <div style={legendStyle}>
 //             <div style={legendItemStyle}>
 //               <span style={labelStyle}>O</span>
@@ -289,8 +361,13 @@
 
 //       {/* Error Overlay */}
 //       {isError && (
-//         <div style={overlayStyle}>
-//           <span>Failed to load data. Please refresh.</span>
+//         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90">
+//           <div className="max-w-md text-center bg-white border border-gray-200 shadow-md rounded-lg px-6 py-4">
+//             <span className="text-sm font-medium text-gray-700 leading-relaxed">
+//               Due to a temporary issue, we are unable to fetch and load the
+//               chart data. Please try again after some time.
+//             </span>
+//           </div>
 //         </div>
 //       )}
 
@@ -301,6 +378,24 @@
 // };
 
 // // --- Styles ---
+
+// const emptyStateStyle: React.CSSProperties = {
+//   display: "flex",
+//   flexDirection: "column",
+//   justifyContent: "center",
+//   alignItems: "center",
+//   width: "100%",
+//   height: "100%",
+//   minHeight: "400px", // Ensures it has space even if parent is collapsed
+//   backgroundColor: "#ffffff",
+//   color: "#191919",
+//   fontFamily:
+//     "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+//   textAlign: "center",
+//   padding: "20px",
+//   border: "1px dashed #e1e3e6",
+//   borderRadius: "8px",
+// };
 
 // const legendWrapper: React.CSSProperties = {
 //   position: "absolute",
@@ -383,6 +478,7 @@ import {
 } from "lightweight-charts";
 import { fetchOHLCPrice } from "../services/tradingChartApi";
 import Loader from "../components/Loader";
+import { useSocket } from "../hook/useSocket";
 
 interface ApiCandle {
   ts: number;
@@ -419,6 +515,9 @@ const TradingChart = () => {
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(true);
 
+  // NEW: This ref prevents the socket from contaminating the chart with old instrument prices
+  const dataLockRef = useRef<string | null>(null);
+
   // UI State
   const [isError, setIsError] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -426,6 +525,62 @@ const TradingChart = () => {
   // Legend State
   const [hoveredCandle, setHoveredCandle] = useState<LegendData | null>(null);
   const [latestCandle, setLatestCandle] = useState<LegendData | null>(null);
+
+  const chartSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+
+  const topic = selectedInstrument ? `tick_message_${selectedInstrument}` : "";
+
+  useSocket(topic, (tick) => {
+    // SECURITY CHECK 1: Ensure we have data and the lock matches the CURRENT instrument
+    if (
+      !tick ||
+      !allDataRef.current.length ||
+      dataLockRef.current !== selectedInstrument
+    ) {
+      return;
+    }
+
+    // SECURITY CHECK 2 (Highly Recommended):
+    // If your 'tick' object contains the instrument ID, uncomment and use this check!
+    // if (tick.InstrumentId !== selectedInstrument) return;
+
+    const price = tick.Price;
+    const time = tick.Time;
+
+    const lastCandle = allDataRef.current[allDataRef.current.length - 1];
+    if (!lastCandle) return;
+
+    const candleTime = lastCandle.time as number;
+    const candleDuration = 60; // timeframe
+
+    // same candle
+    if (time < candleTime + candleDuration) {
+      const updatedCandle = {
+        ...lastCandle,
+        close: price,
+        high: Math.max(lastCandle.high, price),
+        low: Math.min(lastCandle.low, price),
+      };
+
+      allDataRef.current[allDataRef.current.length - 1] = updatedCandle;
+      chartSeriesRef.current?.update(updatedCandle);
+      setLatestCandle(updatedCandle);
+    }
+    // new candle
+    else {
+      const newCandle = {
+        time: time as any,
+        open: price,
+        high: price,
+        low: price,
+        close: price,
+      };
+
+      allDataRef.current.push(newCandle);
+      chartSeriesRef.current?.update(newCandle);
+      setLatestCandle(newCandle);
+    }
+  });
 
   // Sync selected instrument with router state
   useEffect(() => {
@@ -438,7 +593,6 @@ const TradingChart = () => {
   useEffect(() => {
     if (!containerRef.current || !selectedInstrument) return;
 
-    // Prevents stale API responses if user switches tabs quickly
     let isActive = true;
 
     // 1. Reset all state for the new instrument
@@ -446,6 +600,8 @@ const TradingChart = () => {
     allDataRef.current = [];
     hasMoreRef.current = true;
     isLoadingRef.current = false;
+    dataLockRef.current = null; // RELOCK THE SOCKET: Stop socket updates while loading
+
     setIsInitialLoading(true);
     setIsError(false);
     setHoveredCandle(null);
@@ -483,6 +639,7 @@ const TradingChart = () => {
       wickUpColor: "#089981",
       wickDownColor: "#f23645",
     });
+    chartSeriesRef.current = candleSeries;
 
     // 4. Setup Auto-Resizing
     const handleResize = () => {
@@ -520,10 +677,13 @@ const TradingChart = () => {
     const loadInitialData = async () => {
       try {
         const formatted = await fetchCandles(1);
-        if (!isActive) return; // Ignore if user already switched instruments
+        if (!isActive) return;
 
         allDataRef.current = formatted;
         candleSeries.setData(formatted);
+
+        // UNLOCK THE SOCKET: Tell the socket it's safe to start updating the chart now
+        dataLockRef.current = selectedInstrument;
 
         if (formatted.length > 0) {
           const lastCandle = formatted[formatted.length - 1];
@@ -550,7 +710,7 @@ const TradingChart = () => {
         const nextPage = pageRef.current + 1;
         const olderData = await fetchCandles(nextPage);
 
-        if (!isActive) return; // Ignore if component unmounted or instrument changed
+        if (!isActive) return;
 
         if (olderData.length === 0) {
           hasMoreRef.current = false;
@@ -600,18 +760,15 @@ const TradingChart = () => {
     // Start data fetch
     loadInitialData();
 
-    // 6. Cleanup function: Runs right before the instrument changes or component unmounts
+    // 6. Cleanup
     return () => {
-      isActive = false; // Kill any pending API requests
+      isActive = false;
       resizeObserver.disconnect();
-      chart.remove(); // Safely destroy the canvas
+      chart.remove();
     };
   }, [selectedInstrument]);
 
-  // ==========================================
-  // NEW: EMPTY STATE CHECK
-  // If there is no instrument selected, show this UI instead of the chart
-  // ==========================================
+  // EMPTY STATE CHECK
   if (!selectedInstrument) {
     return (
       <div style={emptyStateStyle}>
@@ -636,7 +793,6 @@ const TradingChart = () => {
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      {/* OHLC Legend Overlay */}
       {displayCandle && (
         <div style={legendWrapper}>
           <div style={symbolStyle}>
@@ -671,14 +827,12 @@ const TradingChart = () => {
         </div>
       )}
 
-      {/* Loading Overlay */}
       {isInitialLoading && (
         <div style={overlayStyle}>
           <Loader />
         </div>
       )}
 
-      {/* Error Overlay */}
       {isError && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90">
           <div className="max-w-md text-center bg-white border border-gray-200 shadow-md rounded-lg px-6 py-4">
@@ -690,14 +844,12 @@ const TradingChart = () => {
         </div>
       )}
 
-      {/* Chart Container */}
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );
 };
 
-// --- Styles ---
-
+// ... (Your existing styles remain exactly the same below here)
 const emptyStateStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -705,7 +857,7 @@ const emptyStateStyle: React.CSSProperties = {
   alignItems: "center",
   width: "100%",
   height: "100%",
-  minHeight: "400px", // Ensures it has space even if parent is collapsed
+  minHeight: "400px",
   backgroundColor: "#ffffff",
   color: "#191919",
   fontFamily:
@@ -715,7 +867,6 @@ const emptyStateStyle: React.CSSProperties = {
   border: "1px dashed #e1e3e6",
   borderRadius: "8px",
 };
-
 const legendWrapper: React.CSSProperties = {
   position: "absolute",
   top: 12,
@@ -735,7 +886,6 @@ const legendWrapper: React.CSSProperties = {
   fontSize: "13px",
   fontWeight: 500,
 };
-
 const symbolStyle: React.CSSProperties = {
   fontSize: "14px",
   fontWeight: 700,
@@ -744,27 +894,17 @@ const symbolStyle: React.CSSProperties = {
   paddingRight: "16px",
   marginRight: "16px",
 };
-
-const legendStyle: React.CSSProperties = {
-  display: "flex",
-  gap: "16px",
-};
-
+const legendStyle: React.CSSProperties = { display: "flex", gap: "16px" };
 const legendItemStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   minWidth: "75px",
 };
-
 const labelStyle: React.CSSProperties = {
   color: "#9094a6",
   marginRight: "6px",
 };
-
-const valueStyle: React.CSSProperties = {
-  fontVariantNumeric: "tabular-nums",
-};
-
+const valueStyle: React.CSSProperties = { fontVariantNumeric: "tabular-nums" };
 const overlayStyle: React.CSSProperties = {
   position: "absolute",
   top: 0,
