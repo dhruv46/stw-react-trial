@@ -16,3 +16,20 @@ export const searchInstrumentApi = (q: string, inst_type: string = "EQ") => {
 export const fetchConditionMap = () => {
   return API.get("/condition_map");
 };
+
+// 🔥 NEW API (Strategy Instrument)
+export const getStrategyInstrumentApi = (strategyId: number) => {
+  return API.get("/getStrategyInstrument", {
+    params: {
+      strategy_id: strategyId,
+    },
+  });
+};
+
+export const getStrategyTimeframeApi = (strategyId: number) => {
+  return API.get("/getStrategyTimeframe", {
+    params: {
+      strategy_id: strategyId,
+    },
+  });
+};

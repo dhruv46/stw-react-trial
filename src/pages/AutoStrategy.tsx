@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { Table, Card, Spin, Typography, Button, Space } from "antd";
+import { Table, Card, Spin, Typography, Button, Space, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { LineChartOutlined, PlusOutlined } from "@ant-design/icons";
 import { FiEdit2 } from "react-icons/fi";
 import { IoStatsChart } from "react-icons/io5";
-import { fetchEnabledAutomatedStrategyList } from "../services/autoStrategyApi";
+import {
+  fetchEnabledAutomatedStrategyList,
+  getStrategyInstrumentApi,
+} from "../services/autoStrategyApi";
 import { useNavigate } from "react-router-dom";
 import Loader from "../components/Loader";
 
 const { Title } = Typography;
 
 interface StrategyRow {
+  id: number; // ✅ ADD THIS
   key: number;
   name: string;
   instrument_name: string;
@@ -37,8 +41,8 @@ export default function AutoStrategy() {
 
       const result = res?.data?.result || [];
 
-      const mapped = result.map((item: any, index: number) => ({
-        key: index,
+      const mapped = result.map((item: any) => ({
+        key: item.id, // ✅ important
         ...item,
       }));
 
@@ -61,17 +65,46 @@ export default function AutoStrategy() {
     {
       title: "Name",
       dataIndex: "name",
-      render: (text) => (
-        <div className="flex items-center gap-2">
-          <div className="border p-[2px] rounded">
-            <LineChartOutlined
-              style={{ fontSize: "17px" }}
-              className="text-blue-500 cursor-pointer"
-            />
+      render: (text, record) => {
+        const handleOpenChart = async () => {
+          try {
+            const res = await getStrategyInstrumentApi(record.id);
+
+            const result = res?.data;
+            if (!result || !Array.isArray(result) || result.length === 0) {
+              message.error("No instrument data found");
+              return;
+            }
+
+            // ✅ Check valid response
+            if (Array.isArray(result) && result.length > 0) {
+              const url = `/chart/${record.id}?strategyName=${encodeURIComponent(record.name)}`;
+
+              // ✅ Open in new tab
+              window.open(url, "_blank", "noopener,noreferrer");
+            } else {
+              console.warn("No instrument data found");
+            }
+          } catch (error) {
+            console.error("Error fetching strategy instrument:", error);
+          }
+        };
+
+        return (
+          <div className="flex items-center gap-2">
+            <div
+              className="border p-[2px] rounded cursor-pointer hover:bg-gray-100"
+              onClick={handleOpenChart}
+            >
+              <LineChartOutlined
+                style={{ fontSize: "17px" }}
+                className="text-blue-500"
+              />
+            </div>
+            {text}
           </div>
-          {text}
-        </div>
-      ),
+        );
+      },
     },
     {
       title: "Underlying",

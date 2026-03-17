@@ -51,6 +51,7 @@ import ManualExecutionPage from "./pages/ManualExecutionPage";
 import AutoStrategy from "./pages/AutoStrategy";
 import AddAutostrategy from "./pages/AddAutostrategy";
 import TradingChart from "./chart/TradingViewWidget";
+import MultiChartPage from "./pages/MultiChartPage";
 
 /* ✅ Layout Component (Shell Removed) */
 function Layout() {
@@ -139,6 +140,7 @@ const router = createBrowserRouter([
       { path: "exceptional-setting", element: <ExceptionalHoliday /> },
       { path: "add-exceptional-holiday", element: <AddExceptionalHoliday /> },
       { path: "chart", element: <TradingChart /> },
+      { path: "chart/:id", element: <MultiChartPage /> },
       {
         path: "edit-exceptional-holiday/:id",
         element: <AddExceptionalHoliday />,
