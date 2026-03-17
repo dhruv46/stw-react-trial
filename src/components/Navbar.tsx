@@ -129,40 +129,6 @@ const Navbar: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // useEffect(() => {
-  //   socketService.connect();
-
-  //   const instruments = ["1_26000", "11_26065"];
-
-  //   instruments.forEach((inst) => {
-  //     socketService.subscribe(`tick_message_${inst}`, (frame: any) => {
-  //       try {
-  //         const outer = JSON.parse(frame.body);
-  //         const inner = JSON.parse(outer.data);
-
-  //         // console.log("inner", inner);
-
-  //         setMarketData((prev) => ({
-  //           ...prev,
-  //           [inst]: {
-  //             Price: inner.Price,
-  //             ChangeValue: inner.ChangeValue,
-  //             PercentChange: inner.PercentChange,
-  //           },
-  //         }));
-  //       } catch (err) {
-  //         console.error("Failed to parse frame:", err);
-  //       }
-  //     });
-  //   });
-
-  //   return () => {
-  //     instruments.forEach((inst) => {
-  //       socketService.unsubscribe(`tick_message_${inst}`);
-  //     });
-  //   };
-  // }, []);
-
   // instrument 1
   useSocket("tick_message_260000101000701", (inner) => {
     setMarketData((prev) => ({
@@ -176,10 +142,10 @@ const Navbar: React.FC = () => {
   });
 
   // instrument 2
-  useSocket("tick_message_260650101190001", (inner) => {
+  useSocket("tick_message_260650101000111", (inner) => {
     setMarketData((prev) => ({
       ...prev,
-      ["260650101190001"]: {
+      ["260650101000111"]: {
         Price: inner.Price,
         ChangeValue: inner.ChangeValue,
         PercentChange: inner.PercentChange,
@@ -291,16 +257,16 @@ const Navbar: React.FC = () => {
               <div className="flex items-center gap-3 tabular-nums">
                 <span
                   className={`font-semibold ${
-                    marketData["260650101190001"]?.PercentChange! >= 0
+                    marketData["260650101000111"]?.PercentChange! >= 0
                       ? "text-green-600"
                       : "text-red-600"
                   }`}
                 >
-                  {marketData["260650101190001"]?.Price?.toFixed(2) ?? "0.00"}
+                  {marketData["260650101000111"]?.Price?.toFixed(2) ?? "0.00"}
                 </span>
                 <span className="text-gray-500">
-                  {marketData["260650101190001"]
-                    ? `${marketData["260650101190001"]?.ChangeValue?.toFixed(2)} (${marketData["260650101190001"]?.PercentChange?.toFixed(2)}%)`
+                  {marketData["260650101000111"]
+                    ? `${marketData["260650101000111"]?.ChangeValue?.toFixed(2)} (${marketData["260650101000111"]?.PercentChange?.toFixed(2)}%)`
                     : "0.00 (0.00%)"}
                 </span>
               </div>
