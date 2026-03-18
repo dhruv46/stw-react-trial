@@ -33,3 +33,11 @@ export const getStrategyTimeframeApi = (strategyId: number) => {
     },
   });
 };
+
+export const getStrategyIndicatorApi = (strategyId: number) => {
+  return API.get("/getStrategyIndicator", {
+    params: {
+      strategy_id: strategyId,
+    },
+  });
+};
