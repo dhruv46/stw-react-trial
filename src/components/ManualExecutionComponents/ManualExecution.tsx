@@ -33,6 +33,7 @@ import {
   InputNumber,
   Modal,
   Checkbox,
+  Tooltip,
 } from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
@@ -168,7 +169,7 @@ const EditableCell: React.FC<any> = ({
         />
       </Form.Item>
     ) : (
-      <div onDoubleClick={toggleEdit} className="cursor-pointer">
+      <div onClick={toggleEdit} className="cursor-pointer">
         {children}
       </div>
     );
@@ -191,7 +192,7 @@ interface ManualExecutionRow {
   stoplossLevel: string | number;
   status: boolean;
   is_position: boolean; // ⭐ add
-
+  ltp: number;
   actionType: "pending" | "active";
   isRowHighlighted?: boolean;
   strategy_id: number;
@@ -326,6 +327,7 @@ const ManualExecution: React.FC = () => {
             productType: item.product_type,
             entryTime: item.entry_time,
 
+            ltp: item.ltp, // ✅ ADD THIS
             entryLevel:
               item.entry_level != null
                 ? Number(item.entry_level).toLocaleString("en-IN")
@@ -1481,23 +1483,40 @@ const ManualExecution: React.FC = () => {
       dataIndex: "underlying",
       width: 80,
       className: "text-[10px]",
-    },
-    {
-      title: "Price",
-      key: "price",
-      width: 70,
-      className: "text-[10px] font-bold",
-      render: (_, record) => {
+      render: (val, record) => {
         const tick = tableTicks[record.underlyingInstrumentId];
 
-        // Show placeholder if socket hasn't returned a price yet
-        if (!tick || tick.Price === undefined) {
-          return <span className="text-gray-400">--</span>;
-        }
+        // ✅ fallback logic
+        const livePrice = tick?.Price;
+        const apiPrice = record?.ltp;
 
-        return <span className={"text-gray-600"}>{Number(tick.Price)}</span>;
+        const price =
+          livePrice !== undefined
+            ? Number(livePrice).toFixed(2)
+            : apiPrice !== undefined
+              ? Number(apiPrice).toFixed(2)
+              : "--";
+
+        const change = tick?.ChangeValue ?? 0;
+
+        return (
+          <Tooltip
+            title={
+              <div className="text-[12px]">
+                <div
+                  className={change >= 0 ? "text-green-600" : "text-red-600"}
+                >
+                  ₹{price}
+                </div>
+              </div>
+            }
+          >
+            <span className="cursor-pointer hover:text-blue-600">{val}</span>
+          </Tooltip>
+        );
       },
     },
+
     {
       title: "Entry",
       dataIndex: "entryLevel",
@@ -1512,8 +1531,8 @@ const ManualExecution: React.FC = () => {
           <span
             className={
               record.is_position
-                ? "text-gray-400 py-0.5 px-1 bg-gray-200 rounded "
-                : "text-[10px]"
+                ? "text-gray-600 py-0.5 px-1 bg-gray-200 rounded cursor-not-allowed"
+                : "text-[12px] cursor-pointer"
             }
           >
             {val}
@@ -1614,13 +1633,26 @@ const ManualExecution: React.FC = () => {
       ...col,
       onCell: (record: ManualExecutionRow) => ({
         record,
-        editable: col.editable,
+        editable:
+          col.dataIndex === "entryLevel"
+            ? col.editable && !record.is_position // ❌ disable if position
+            : col.editable, // ✅ stoploss still editable
         dataIndex: col.dataIndex,
         title: col.title,
         handleSave: handleSave,
       }),
     };
   });
+
+  // ✅ Prevent rows from unmounting during socket ticks by memoizing the components
+  const tableComponents = React.useMemo(() => {
+    return {
+      body: {
+        row: (props: any) => <CombinedRow {...props} data={data} />,
+        cell: EditableCell,
+      },
+    };
+  }, [data]); // Only recreate if the main 'data' array changes
   const handleSave = async (row: ManualExecutionRow) => {
     const newData = [...data];
     const index = newData.findIndex((item) => item.id === row.id);
@@ -1648,6 +1680,12 @@ const ManualExecution: React.FC = () => {
     setData(newData);
 
     try {
+      const parseNumber = (val: any) => {
+        if (val === "-" || val === null || val === undefined || val === "") {
+          return 0; // or keep previous value
+        }
+        return Number(String(val).replace(/,/g, ""));
+      };
       const payload = {
         id: updatedRow.id,
         instrument: updatedRow.instrumentId,
@@ -1664,10 +1702,8 @@ const ManualExecution: React.FC = () => {
         product_type: updatedRow.productType,
         entry_time: updatedRow.entryTime,
 
-        entry_level: Number(String(updatedRow.entryLevel).replace(/,/g, "-")),
-        stoploss_level: Number(
-          String(updatedRow.stoplossLevel).replace(/,/g, "-"),
-        ),
+        entry_level: parseNumber(updatedRow.entryLevel),
+        stoploss_level: parseNumber(updatedRow.stoplossLevel),
 
         enabled: updatedRow.status,
         reset: !updatedRow.status,
@@ -1966,101 +2002,6 @@ const ManualExecution: React.FC = () => {
       console.error("Apply client multiplier failed", error);
     }
   };
-
-  // const clientColumns = [
-  //   {
-  //     title: (
-  //       <Checkbox
-  //         checked={clientData.length > 0 && clientData.every((c) => c.enabled)}
-  //         indeterminate={
-  //           clientData.some((c) => c.enabled) &&
-  //           !clientData.every((c) => c.enabled)
-  //         }
-  //         onChange={(e) => {
-  //           const checked = e.target.checked;
-
-  //           const updated = clientData.map((c) => ({
-  //             ...c,
-  //             enabled: checked,
-  //           }));
-
-  //           setClientData(updated);
-  //         }}
-  //       />
-  //     ),
-  //     dataIndex: "enabled",
-  //     width: 40,
-  //     render: (val: boolean, record: any) => (
-  //       console.log(record),
-  //       (
-  //         <Checkbox
-  //           checked={val}
-  //           disabled={record.is_position} // ⭐ disable
-  //           onChange={(e) => {
-  //             const updated = clientData.map((c) =>
-  //               c.client_id === record.client_id
-  //                 ? { ...c, enabled: e.target.checked }
-  //                 : c,
-  //             );
-  //             setClientData(updated);
-  //           }}
-  //         />
-  //       )
-  //     ),
-  //   },
-  //   {
-  //     title: "Client ID",
-  //     dataIndex: "client_id",
-  //   },
-  //   {
-  //     title: "Client Name",
-  //     dataIndex: "name",
-  //   },
-  //   {
-  //     title: "Broker",
-  //     dataIndex: "broker",
-  //   },
-  //   {
-  //     title: "Multiplier",
-  //     dataIndex: "multiplier",
-  //     render: (value: number, record: any) => {
-  //       const showInput =
-  //         clientModalId === record.client_id ||
-  //         value === 0 ||
-  //         value === undefined ||
-  //         value === null;
-
-  //       if (showInput) {
-  //         return (
-  //           <InputNumber
-  //             min={1}
-  //             autoFocus
-  //             value={value || undefined}
-  //             onPressEnter={(e) => {
-  //               const val = Number((e.target as HTMLInputElement).value);
-  //               handleMultiplierChange(record.client_id, val);
-  //               setClientModalId(null);
-  //             }}
-  //             // onBlur={(e) => {
-  //             //   const val = Number((e.target as HTMLInputElement).value);
-  //             //   handleMultiplierChange(record.client_id, val);
-  //             //   setClientModalId(null);
-  //             // }}
-  //           />
-  //         );
-  //       }
-
-  //       return (
-  //         <div
-  //           onDoubleClick={() => setClientModalId(record.client_id)}
-  //           className="cursor-pointer"
-  //         >
-  //           {value}x
-  //         </div>
-  //       );
-  //     },
-  //   },
-  // ];
 
   const clientColumns = [
     {
@@ -2617,14 +2558,7 @@ const ManualExecution: React.FC = () => {
                 >
                   <Table
                     rowKey="id"
-                    components={{
-                      body: {
-                        row: (props: any) => (
-                          <CombinedRow {...props} data={data} />
-                        ),
-                        cell: EditableCell,
-                      },
-                    }}
+                    components={tableComponents}
                     size="small"
                     columns={mergedColumns}
                     dataSource={data}
@@ -2680,7 +2614,7 @@ const ManualExecution: React.FC = () => {
       <style>
         {`
         .manual-execution-table .ant-input-number-input {
-  font-size: 10px !important;
+  font-size: 11px !important;
   font-weight: 400;
   height: 18px;
 }
@@ -2698,13 +2632,13 @@ const ManualExecution: React.FC = () => {
           .row-white td { background-color: #ffffff !important; }
         .manual-execution-table .ant-table-thead > tr > th {
 
-          font-size: 10px;
+          font-size: 12px;
           font-weight: 600;
           padding: 4px 4px;
         }
         .manual-execution-table .ant-table-tbody > tr > td {
           padding: 3px 4px !important;
-          font-size: 10px;
+          font-size: 12px;
           white-space: nowrap;
         }
 
