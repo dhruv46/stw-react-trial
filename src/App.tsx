@@ -86,12 +86,27 @@ function Layout() {
   }, []);
 
   return (
-    <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
+    // <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
+    //   <Topbar />
+    //   {/* <MarketBar /> */}
+    //   <div className="flex h-full">
+    //     <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+    //     <main className="flex-1 min-w-0 overflow-hidden bg-slate-100">
+    //       <Outlet />
+    //     </main>
+    //   </div>
+    // </div>
+    // 1. Lock the app to the viewport height and make it a flex column
+    <div className="h-screen flex flex-col text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
+      {/* Topbar takes up its natural space at the top */}
       <Topbar />
-      {/* <MarketBar /> */}
-      <div className="flex h-full">
+
+      {/* 2. flex-1 fills the remaining height, overflow-hidden stops whole-page scrolling */}
+      <div className="flex flex-1 overflow-hidden">
         <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <main className="flex-1 min-w-0 overflow-hidden bg-slate-100">
+
+        {/* 3. overflow-y-auto allows ONLY this main section to scroll if content overflows */}
+        <main className="flex-1 min-w-0 overflow-y-auto bg-slate-100">
           <Outlet />
         </main>
       </div>

@@ -233,14 +233,26 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
   }
 
   return (
+    //   <aside
+    //     className={`
+    //   hidden xl:flex xl:flex-col
+    //   transition-all duration-300
+    //   border-r border-neutral-200 dark:border-neutral-800 bg-white
+    //   h-[calc(100vh-56px)] sticky top-[56px]
+    //   ${isOpen ? "w-[385px]" : "w-[40px]"}
+    // `}
+    //   >
     <aside
       className={`
-    hidden xl:flex xl:flex-col
-    transition-all duration-300
-    border-r border-neutral-200 dark:border-neutral-800 bg-white
-    h-[calc(100vh-56px)] sticky top-[56px]
-    ${isOpen ? "w-[385px]" : "w-[40px]"}
-  `}
+        hidden xl:flex xl:flex-col
+        transition-all duration-300
+        border-r border-neutral-200 dark:border-neutral-800 bg-white
+       
+        h-full
+   
+        overflow-hidden
+        ${isOpen ? "w-[385px]" : "w-[40px]"}
+      `}
     >
       {/* ================= CLOSED STATE ================= */}
       {!isOpen && (
