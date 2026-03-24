@@ -465,39 +465,254 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                 No Data Available
               </div>
             ) : (
+              //           watchlist.map((s, index) => (
+              //             // <div
+              //             //   key={s.symbol + index}
+              //             //   className="px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+              //             // >
+              //             <div
+              //               key={s.symbol + index}
+              //               className="group px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+              //             >
+              //               <div className="flex items-center gap-2">
+              //                 <div
+              //                   className={`w-[2px] h-3 ${
+              //                     s.change >= 0 ? "bg-emerald-500" : "bg-rose-500"
+              //                   }`}
+              //                 />
+
+              //                 <div className="text-[13px] font-medium text-neutral-700">
+              //                   {s.symbol}
+              //                 </div>
+              //               </div>
+
+              //               <div className="w-[200px] shrink-0 flex justify-end">
+              //                 {/* ================= NORMAL DATA ================= */}
+              //                 <div className="flex items-center justify-end gap-2 text-[11px] tabular-nums group-hover:hidden">
+              //                   {/* LTP */}
+              //                   <div
+              //                     className={`w-[85px] text-right font-medium ${
+              //                       s.change >= 0 ? "text-emerald-500" : "text-rose-500"
+              //                     }`}
+              //                   >
+              //                     {s.last.toLocaleString("en-IN", {
+              //                       minimumFractionDigits: 2,
+              //                       maximumFractionDigits: 2,
+              //                     })}
+              //                   </div>
+
+              //                   {/* Change & Percentage Combined */}
+              //                   <div className="flex items-center justify-end w-[125px] text-gray-500">
+              //                     <span>
+              //                       {s.changeValue?.toLocaleString("en-IN", {
+              //                         minimumFractionDigits: 2,
+              //                         maximumFractionDigits: 2,
+              //                       })}
+              //                     </span>
+
+              //                     {/* Added a tiny left margin (ml-1) so they don't completely overlap.
+              //     Remove 'ml-1' if you want zero space between them. */}
+              //                     <span className="ml-1">({s.change.toFixed(2)}%)</span>
+
+              //                     {/* {s.change >= 0 ? (
+              //   <ChevronUp size={14} className="ml-0.5" />
+              // ) : (
+              //   <ChevronDown size={14} className="ml-0.5" />
+              // )} */}
+              //                   </div>
+              //                 </div>
+
+              //                 {/* ================= HOVER ICONS ================= */}
+              //                 <div className="hidden group-hover:flex items-center gap-2 relative">
+              //                   {/* ✅ NON SPOT / INDEX → BUY SELL */}
+              //                   {s.series !== "SPOT" && s.series !== "INDEX" && (
+              //                     <>
+              //                       {/* BUY */}
+              //                       <button
+              //                         className="
+              //     px-2 py-[2px]
+              //     text-[11px]
+              //     font-semibold
+              //     rounded
+              //     bg-blue-500
+              //     text-white
+              //     hover:bg-blue-600
+              //   "
+              //                       >
+              //                         B
+              //                       </button>
+
+              //                       {/* SELL */}
+              //                       <button
+              //                         className="
+              //     px-2 py-[2px]
+              //     text-[11px]
+              //     font-semibold
+              //     rounded
+              //     bg-orange-500
+              //     text-white
+              //     hover:bg-orange-600
+              //   "
+              //                       >
+              //                         S
+              //                       </button>
+              //                     </>
+              //                   )}
+
+              //                   {/* CHART ICON (COMMON) */}
+              //                   <button
+              //                     className="p-1 rounded hover:bg-neutral-200"
+              //                     onClick={(e) => {
+              //                       e.stopPropagation();
+
+              //                       navigate("/chart", {
+              //                         state: {
+              //                           instrumentKey: s.instrumentKey,
+              //                           symbol: s.symbol,
+              //                           series: s.series,
+              //                         },
+              //                       });
+              //                     }}
+              //                   >
+              //                     <ChartCandlestick size={15} className="text-blue-500" />
+              //                   </button>
+
+              //                   {/* MENU BUTTON */}
+              //                   <button
+              //                     className="p-1 rounded hover:bg-neutral-200"
+              //                     onClick={(e) => {
+              //                       e.stopPropagation();
+
+              //                       if (!s.instrumentKey) return;
+
+              //                       setOpenMenu(
+              //                         openMenu === s.instrumentKey
+              //                           ? null
+              //                           : s.instrumentKey,
+              //                       );
+              //                     }}
+              //                   >
+              //                     <EllipsisVertical size={15} />
+              //                   </button>
+
+              //                   {/* ================= DROPDOWN ================= */}
+              //                   {openMenu === s.instrumentKey && (
+              //                     <div
+              //                       className="
+              //   absolute right-0 top-7
+              //   bg-white border rounded-md shadow-lg
+              //   w-[170px]
+              //   z-50
+              // "
+              //                     >
+              //                       {/* OPTION CHAIN ONLY FOR SPOT / INDEX */}
+              //                       {(s.series === "SPOT" || s.series === "INDEX") && (
+              //                         <button
+              //                           className="
+              //       flex items-center gap-3
+              //       w-full px-4 py-2
+              //       hover:bg-neutral-100
+              //       text-sm
+              //     "
+              //                         >
+              //                           <ArrowLeftRight size={16} />
+              //                           Option Chain
+              //                         </button>
+              //                       )}
+
+              //                       {/* REMOVE */}
+              //                       <button
+              //                         className="
+              //     flex items-center gap-3
+              //     w-full px-4 py-2
+              //     hover:bg-neutral-100
+              //     text-sm
+              //   "
+              //                         onClick={async (e) => {
+              //                           e.stopPropagation();
+
+              //                           try {
+              //                             if (!s.instrumentKey) return;
+
+              //                             await deleteWatchlistApi(s.instrumentKey);
+
+              //                             // refresh watchlist
+              //                             // ✅ refresh watchlist properly
+              //                             const res = await getWatchlistApi(
+              //                               Number(active),
+              //                             );
+
+              //                             const data = res?.data?.result ?? [];
+
+              //                             const mappedData: WatchlistItem[] = data.map(
+              //                               (item: any) => ({
+              //                                 symbol:
+              //                                   item.DisplayName ||
+              //                                   item.instrument_id ||
+              //                                   "UNKNOWN",
+
+              //                                 name:
+              //                                   item.DetailedDescription !== "-"
+              //                                     ? item.DetailedDescription
+              //                                     : "",
+
+              //                                 last: Number(item.ltp ?? 0),
+
+              //                                 change: Number(item.PercentChange ?? 0),
+
+              //                                 changeValue: Number(item.ChangeValue ?? 0),
+
+              //                                 instrumentKey:
+              //                                   item.iifl || item.instrument_id,
+              //                                 // ✅ ADD THIS
+              //                                 series: item.Series || item.series,
+              //                               }),
+              //                             );
+
+              //                             setWatchlist(mappedData);
+              //                             setError(null);
+              //                           } catch (err) {
+              //                             console.error("Delete failed", err);
+              //                           }
+              //                         }}
+              //                       >
+              //                         <Trash2 size={16} />
+              //                         Remove
+              //                       </button>
+              //                     </div>
+              //                   )}
+              //                 </div>
+              //               </div>
+              //             </div>
+              //           ))
               watchlist.map((s, index) => (
-                // <div
-                //   key={s.symbol + index}
-                //   className="px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
-                // >
                 <div
                   key={s.symbol + index}
-                  className="group px-4 py-[4px] flex justify-between border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+                  className="group px-2 py-[4px] flex justify-between items-center border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
                 >
-                  <div className="flex items-center gap-2">
+                  {/* ================= LEFT SIDE (SYMBOL) ================= */}
+                  {/* Added flex-1 and min-w-0 so this container takes up available space without breaking layout */}
+                  <div className="flex items-center gap-1 flex-1 min-w-0 pr-4">
                     <div
-                      className={`w-[2px] h-3 ${
+                      className={`w-[2px] h-3 shrink-0 ${
                         s.change >= 0 ? "bg-emerald-500" : "bg-rose-500"
                       }`}
                     />
 
-                    <div className="text-[13px] font-medium text-neutral-700">
+                    {/* Added 'truncate' to keep long names strictly on one line */}
+                    <div className="text-[12px] font-medium text-neutral-700 truncate">
                       {s.symbol}
                     </div>
                   </div>
 
-                  <div className="w-[200px] shrink-0 flex justify-end">
-                    {/* ================= NORMAL DATA ================= */}
-                    <div
-                      className="
-      flex items-center justify-end gap-2
-      text-[11px] tabular-nums
-      group-hover:hidden
-    "
-                    >
-                      {/* LTP */}
+                  {/* ================= RIGHT SIDE (DATA & ACTIONS) ================= */}
+                  {/* Reduced overall container width from 200px to 180px */}
+                  <div className="w-[180px] shrink-0 flex justify-end">
+                    {/* Normal Data View */}
+                    <div className="flex items-center justify-end text-[11px] tabular-nums group-hover:hidden">
+                      {/* LTP - Reduced width from w-[85px] to w-[70px] */}
                       <div
-                        className={`w-[85px] text-right font-medium ${
+                        className={`w-[70px] text-right font-medium ${
                           s.change >= 0 ? "text-emerald-500" : "text-rose-500"
                         }`}
                       >
@@ -507,73 +722,37 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                         })}
                       </div>
 
-                      {/* Change */}
-                      <div className="flex items-center ">
-                        <div className={`w-[65px] text-right text-gray-500`}>
+                      {/* Change & Percentage - Reduced width from w-[125px] to w-[105px] */}
+                      <div className="flex items-center justify-end w-[105px] text-gray-500">
+                        <span>
                           {s.changeValue?.toLocaleString("en-IN", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
-                        </div>
-
-                        {/* Percentage */}
-                        <div
-                          className={`flex items-center justify-end w-[60px] text-gray-500`}
-                        >
-                          <span>({s.change.toFixed(2)}%)</span>
-
-                          {/* {s.change >= 0 ? (
-                            <ChevronUp size={14} />
-                          ) : (
-                            <ChevronDown size={14} />
-                          )} */}
-                        </div>
+                        </span>
+                        <span className="ml-1">({s.change.toFixed(2)}%)</span>
                       </div>
                     </div>
 
                     {/* ================= HOVER ICONS ================= */}
                     <div className="hidden group-hover:flex items-center gap-2 relative">
-                      {/* ✅ NON SPOT / INDEX → BUY SELL */}
+                      {/* NON SPOT / INDEX → BUY SELL */}
                       {s.series !== "SPOT" && s.series !== "INDEX" && (
                         <>
-                          {/* BUY */}
-                          <button
-                            className="
-        px-2 py-[2px]
-        text-[11px]
-        font-semibold
-        rounded
-        bg-blue-500
-        text-white
-        hover:bg-blue-600
-      "
-                          >
+                          <button className="px-2 py-[2px] text-[11px] font-semibold rounded bg-blue-500 text-white hover:bg-blue-600">
                             B
                           </button>
-
-                          {/* SELL */}
-                          <button
-                            className="
-        px-2 py-[2px]
-        text-[11px]
-        font-semibold
-        rounded
-        bg-orange-500
-        text-white
-        hover:bg-orange-600
-      "
-                          >
+                          <button className="px-2 py-[2px] text-[11px] font-semibold rounded bg-orange-500 text-white hover:bg-orange-600">
                             S
                           </button>
                         </>
                       )}
 
-                      {/* CHART ICON (COMMON) */}
+                      {/* CHART ICON */}
                       <button
                         className="p-1 rounded hover:bg-neutral-200"
                         onClick={(e) => {
                           e.stopPropagation();
-
                           navigate("/chart", {
                             state: {
                               instrumentKey: s.instrumentKey,
@@ -591,9 +770,7 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                         className="p-1 rounded hover:bg-neutral-200"
                         onClick={(e) => {
                           e.stopPropagation();
-
                           if (!s.instrumentKey) return;
-
                           setOpenMenu(
                             openMenu === s.instrumentKey
                               ? null
@@ -604,80 +781,43 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                         <EllipsisVertical size={15} />
                       </button>
 
-                      {/* ================= DROPDOWN ================= */}
+                      {/* DROPDOWN */}
                       {openMenu === s.instrumentKey && (
-                        <div
-                          className="
-      absolute right-0 top-7
-      bg-white border rounded-md shadow-lg
-      w-[170px]
-      z-50
-    "
-                        >
-                          {/* OPTION CHAIN ONLY FOR SPOT / INDEX */}
+                        <div className="absolute right-0 top-7 bg-white border rounded-md shadow-lg w-[170px] z-50">
                           {(s.series === "SPOT" || s.series === "INDEX") && (
-                            <button
-                              className="
-          flex items-center gap-3
-          w-full px-4 py-2
-          hover:bg-neutral-100
-          text-sm
-        "
-                            >
+                            <button className="flex items-center gap-3 w-full px-4 py-2 hover:bg-neutral-100 text-sm">
                               <ArrowLeftRight size={16} />
                               Option Chain
                             </button>
                           )}
 
-                          {/* REMOVE */}
                           <button
-                            className="
-        flex items-center gap-3
-        w-full px-4 py-2
-        hover:bg-neutral-100
-        text-sm
-      "
+                            className="flex items-center gap-3 w-full px-4 py-2 hover:bg-neutral-100 text-sm text-red-600"
                             onClick={async (e) => {
                               e.stopPropagation();
-
                               try {
                                 if (!s.instrumentKey) return;
-
                                 await deleteWatchlistApi(s.instrumentKey);
-
-                                // refresh watchlist
-                                // ✅ refresh watchlist properly
                                 const res = await getWatchlistApi(
                                   Number(active),
                                 );
-
                                 const data = res?.data?.result ?? [];
-
-                                const mappedData: WatchlistItem[] = data.map(
-                                  (item: any) => ({
-                                    symbol:
-                                      item.DisplayName ||
-                                      item.instrument_id ||
-                                      "UNKNOWN",
-
-                                    name:
-                                      item.DetailedDescription !== "-"
-                                        ? item.DetailedDescription
-                                        : "",
-
-                                    last: Number(item.ltp ?? 0),
-
-                                    change: Number(item.PercentChange ?? 0),
-
-                                    changeValue: Number(item.ChangeValue ?? 0),
-
-                                    instrumentKey:
-                                      item.iifl || item.instrument_id,
-                                    // ✅ ADD THIS
-                                    series: item.Series || item.series,
-                                  }),
-                                );
-
+                                const mappedData = data.map((item: any) => ({
+                                  symbol:
+                                    item.DisplayName ||
+                                    item.instrument_id ||
+                                    "UNKNOWN",
+                                  name:
+                                    item.DetailedDescription !== "-"
+                                      ? item.DetailedDescription
+                                      : "",
+                                  last: Number(item.ltp ?? 0),
+                                  change: Number(item.PercentChange ?? 0),
+                                  changeValue: Number(item.ChangeValue ?? 0),
+                                  instrumentKey:
+                                    item.iifl || item.instrument_id,
+                                  series: item.Series || item.series,
+                                }));
                                 setWatchlist(mappedData);
                                 setError(null);
                               } catch (err) {
