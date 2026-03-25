@@ -52,14 +52,109 @@ import AutoStrategy from "./pages/AutoStrategy";
 import AddAutostrategy from "./pages/AddAutostrategy";
 import TradingChart from "./chart/TradingViewWidget";
 import MultiChartPage from "./pages/MultiChartPage";
+import OrderModal from "./components/OrderModal";
 
 /* ✅ Layout Component (Shell Removed) */
+// function Layout() {
+//   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+//   const subscribed = useRef(false);
+//   const toggleSidebar = () => {
+//     setIsSidebarOpen((prev) => !prev);
+//   };
+//   useEffect(() => {
+//     socketService.connect();
+//   }, []);
+
+//   useEffect(() => {
+//     if (subscribed.current) return;
+//     subscribed.current = true;
+
+//     const callback = (data: any) => {
+//       const parsed = JSON.parse(data.data || "{}");
+
+//       if (parsed.status === "success") {
+//         message.success(parsed.description || "Order executed");
+//         eventBus.emit("ORDER_EXECUTED");
+//       }
+//     };
+
+//     socketService.subscribe("placed_order_notification", callback);
+
+//     return () => {
+//       socketService.unsubscribe("placed_order_notification", callback);
+//       subscribed.current = false;
+//     };
+//   }, []);
+
+//   return (
+//     // <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
+//     //   <Topbar />
+//     //   {/* <MarketBar /> */}
+//     //   <div className="flex h-full">
+//     //     <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+//     //     <main className="flex-1 min-w-0 overflow-hidden bg-slate-100">
+//     //       <Outlet />
+//     //     </main>
+//     //   </div>
+//     // </div>
+//     // 1. Lock the app to the viewport height and make it a flex column
+//     <div className="h-screen flex flex-col text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
+//       {/* Topbar takes up its natural space at the top */}
+//       <Topbar />
+
+//       {/* 2. flex-1 fills the remaining height, overflow-hidden stops whole-page scrolling */}
+//       <div className="flex flex-1 overflow-hidden">
+//         <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+
+//         {/* 3. overflow-y-auto allows ONLY this main section to scroll if content overflows */}
+//         <main className="flex-1 min-w-0 overflow-y-auto bg-slate-100">
+//           <Outlet />
+//         </main>
+//       </div>
+//     </div>
+//   );
+// }
 function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const subscribed = useRef(false);
+
+  const [orderModal, setOrderModal] = useState<{
+    isOpen: boolean;
+    type: "BUY" | "SELL" | null;
+    symbol?: string;
+    instrumentKey?: string;
+    series?: string;
+  }>({
+    isOpen: false,
+    type: null,
+  });
+
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };
+
+  const openOrderModal = (data: {
+    type: "BUY" | "SELL";
+    symbol: string;
+    instrumentKey?: string;
+    series?: string;
+  }) => {
+    setOrderModal({
+      isOpen: true,
+      ...data,
+    });
+  };
+
+  const closeOrderModal = () => {
+    setOrderModal({
+      isOpen: false,
+      type: null,
+      symbol: "",
+      instrumentKey: "",
+      series: "",
+    });
+  };
+
   useEffect(() => {
     socketService.connect();
   }, []);
@@ -86,30 +181,29 @@ function Layout() {
   }, []);
 
   return (
-    // <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
-    //   <Topbar />
-    //   {/* <MarketBar /> */}
-    //   <div className="flex h-full">
-    //     <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-    //     <main className="flex-1 min-w-0 overflow-hidden bg-slate-100">
-    //       <Outlet />
-    //     </main>
-    //   </div>
-    // </div>
-    // 1. Lock the app to the viewport height and make it a flex column
     <div className="h-screen flex flex-col text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
-      {/* Topbar takes up its natural space at the top */}
       <Topbar />
 
-      {/* 2. flex-1 fills the remaining height, overflow-hidden stops whole-page scrolling */}
       <div className="flex flex-1 overflow-hidden">
-        <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <LeftRail
+          isOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+          openOrderModal={openOrderModal}
+        />
 
-        {/* 3. overflow-y-auto allows ONLY this main section to scroll if content overflows */}
         <main className="flex-1 min-w-0 overflow-y-auto bg-slate-100">
           <Outlet />
         </main>
       </div>
+
+      <OrderModal
+        isOpen={orderModal.isOpen}
+        onClose={closeOrderModal}
+        type={orderModal.type}
+        symbol={orderModal.symbol}
+        instrumentKey={orderModal.instrumentKey}
+        series={orderModal.series}
+      />
     </div>
   );
 }

@@ -27,9 +27,19 @@ const tabs = ["1", "2", "3", "4", "5"];
 interface LeftRailProps {
   isOpen: boolean;
   toggleSidebar: () => void;
+  openOrderModal: (data: {
+    type: "BUY" | "SELL";
+    symbol: string;
+    instrumentKey?: string;
+    series?: string;
+  }) => void;
 }
 
-export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
+export default function LeftRail({
+  isOpen,
+  toggleSidebar,
+  openOrderModal,
+}: LeftRailProps) {
   const location = useLocation(); // ✅ get current path
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -737,12 +747,45 @@ export default function LeftRail({ isOpen, toggleSidebar }: LeftRailProps) {
                     {/* ================= HOVER ICONS ================= */}
                     <div className="hidden group-hover:flex items-center gap-2 relative">
                       {/* NON SPOT / INDEX → BUY SELL */}
-                      {s.series !== "SPOT" && s.series !== "INDEX" && (
+                      {/* {s.series !== "SPOT" && s.series !== "INDEX" && (
                         <>
                           <button className="px-2 py-[2px] text-[11px] font-semibold rounded bg-blue-500 text-white hover:bg-blue-600">
                             B
                           </button>
                           <button className="px-2 py-[2px] text-[11px] font-semibold rounded bg-orange-500 text-white hover:bg-orange-600">
+                            S
+                          </button>
+                        </>
+                      )} */}
+                      {s.series !== "SPOT" && s.series !== "INDEX" && (
+                        <>
+                          <button
+                            className="px-2 py-[2px] text-[11px] font-semibold rounded bg-blue-500 text-white hover:bg-blue-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openOrderModal({
+                                type: "BUY",
+                                symbol: s.symbol,
+                                instrumentKey: s.instrumentKey,
+                                series: s.series,
+                              });
+                            }}
+                          >
+                            B
+                          </button>
+
+                          <button
+                            className="px-2 py-[2px] text-[11px] font-semibold rounded bg-orange-500 text-white hover:bg-orange-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openOrderModal({
+                                type: "SELL",
+                                symbol: s.symbol,
+                                instrumentKey: s.instrumentKey,
+                                series: s.series,
+                              });
+                            }}
+                          >
                             S
                           </button>
                         </>
