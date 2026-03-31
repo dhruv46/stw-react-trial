@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useLocation,
   createBrowserRouter,
@@ -10,9 +10,6 @@ import { message } from "antd";
 
 import Holdings from "./pages/Holdings";
 import Positions from "./pages/Positions";
-import Funds from "./pages/Funds";
-import Watchlists from "./pages/Watchlists";
-import Markets from "./pages/Markets";
 import Login from "./pages/Login";
 import Forgot from "./pages/Forgot";
 import Topbar from "./components/Navbar";
@@ -55,65 +52,7 @@ import MultiChartPage from "./pages/MultiChartPage";
 import OrderModal from "./components/OrderModal";
 
 /* ✅ Layout Component (Shell Removed) */
-// function Layout() {
-//   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-//   const subscribed = useRef(false);
-//   const toggleSidebar = () => {
-//     setIsSidebarOpen((prev) => !prev);
-//   };
-//   useEffect(() => {
-//     socketService.connect();
-//   }, []);
 
-//   useEffect(() => {
-//     if (subscribed.current) return;
-//     subscribed.current = true;
-
-//     const callback = (data: any) => {
-//       const parsed = JSON.parse(data.data || "{}");
-
-//       if (parsed.status === "success") {
-//         message.success(parsed.description || "Order executed");
-//         eventBus.emit("ORDER_EXECUTED");
-//       }
-//     };
-
-//     socketService.subscribe("placed_order_notification", callback);
-
-//     return () => {
-//       socketService.unsubscribe("placed_order_notification", callback);
-//       subscribed.current = false;
-//     };
-//   }, []);
-
-//   return (
-//     // <div className="min-h-screen text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
-//     //   <Topbar />
-//     //   {/* <MarketBar /> */}
-//     //   <div className="flex h-full">
-//     //     <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-//     //     <main className="flex-1 min-w-0 overflow-hidden bg-slate-100">
-//     //       <Outlet />
-//     //     </main>
-//     //   </div>
-//     // </div>
-//     // 1. Lock the app to the viewport height and make it a flex column
-//     <div className="h-screen flex flex-col text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-900">
-//       {/* Topbar takes up its natural space at the top */}
-//       <Topbar />
-
-//       {/* 2. flex-1 fills the remaining height, overflow-hidden stops whole-page scrolling */}
-//       <div className="flex flex-1 overflow-hidden">
-//         <LeftRail isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-
-//         {/* 3. overflow-y-auto allows ONLY this main section to scroll if content overflows */}
-//         <main className="flex-1 min-w-0 overflow-y-auto bg-slate-100">
-//           <Outlet />
-//         </main>
-//       </div>
-//     </div>
-//   );
-// }
 function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const subscribed = useRef(false);
@@ -238,9 +177,14 @@ const router = createBrowserRouter([
       { path: "manual-execution", element: <ManualExecutionPage /> },
       { path: "auto-strategy", element: <AutoStrategy /> },
       { path: "add-auto-strategy", element: <AddAutostrategy /> },
-      { path: "funds", element: <Funds /> },
-      { path: "watchlists", element: <Watchlists /> },
-      { path: "markets", element: <Markets /> },
+
+      // charts routes
+
+      { path: "chart", element: <TradingChart /> },
+      { path: "chart/:id", element: <MultiChartPage /> },
+
+      //settings all api routes
+
       { path: "user-list", element: <UserList /> },
       { path: "userinfo", element: <UserInfo /> },
       { path: "holiday", element: <Holiday /> },
@@ -248,8 +192,6 @@ const router = createBrowserRouter([
       { path: "edit-holiday/:id", element: <AddHoliday /> },
       { path: "exceptional-setting", element: <ExceptionalHoliday /> },
       { path: "add-exceptional-holiday", element: <AddExceptionalHoliday /> },
-      { path: "chart", element: <TradingChart /> },
-      { path: "chart/:id", element: <MultiChartPage /> },
       {
         path: "edit-exceptional-holiday/:id",
         element: <AddExceptionalHoliday />,
