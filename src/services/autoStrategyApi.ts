@@ -41,3 +41,8 @@ export const getStrategyIndicatorApi = (strategyId: number) => {
     },
   });
 };
+
+// ✅ INSERT / UPDATE STRATEGY
+export const insertUpdateStrategyApi = (payload: any) => {
+  return API.post("/insert_update_strategy", payload);
+};
