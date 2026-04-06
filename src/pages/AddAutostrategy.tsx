@@ -20,8 +20,9 @@
 //   searchInstrumentApi,
 //   fetchConditionMap,
 //   insertUpdateStrategyApi,
+//   getStrategyByIdApi,
 // } from "../services/autoStrategyApi";
-// import { useNavigate } from "react-router-dom";
+// import { useNavigate, useParams } from "react-router-dom";
 
 // const { Text, Title } = Typography;
 // const { Option } = Select;
@@ -44,9 +45,13 @@
 
 // export default function AddAutostrategy() {
 //   const navigate = useNavigate();
+//   const { id } = useParams();
+
 
 //   const [options, setOptions] = useState<any[]>([]);
 //   const [loading, setLoading] = useState(false);
+//   const [saving, setSaving] = useState(false); // Added state for save button loading
+
 //   const [underlying, setUnderlying] = useState("equity");
 //   const [multiLeg, setMultiLeg] = useState(false);
 //   const [automated, setAutomated] = useState(false);
@@ -903,10 +908,11 @@
 //       </div>
 
 //       <div className="flex justify-end gap-3 mt-6 border-t pt-4">
-//         <Button>Cancel</Button>
+//         <Button onClick={() => navigate("/auto-strategy")}>Cancel</Button>
 //         <Button
 //           type="primary"
-//           onClick={() => {
+//           loading={saving} // Added loading state here
+//           onClick={async () => {
 //             if (!selectedInstrument) {
 //               message.error("Please select an instrument first");
 //               return;
@@ -916,10 +922,22 @@
 
 //             console.log("========== FINAL API PAYLOAD ==========");
 //             console.log(finalPayload);
-//             console.log(
-//               "========== FINAL API PAYLOAD JSON ==========",
-//               JSON.stringify(finalPayload, null, 2),
-//             );
+
+//             // Integrating the API call
+//             try {
+//               setSaving(true);
+//               const response = await insertUpdateStrategyApi(finalPayload);
+
+//               if (response) {
+//                 message.success("Strategy saved successfully!");
+//                 navigate("/auto-strategy"); // Redirects the user back to the list
+//               }
+//             } catch (error) {
+//               console.error("Error saving strategy:", error);
+//               message.error("Failed to save strategy. Please try again.");
+//             } finally {
+//               setSaving(false);
+//             }
 //           }}
 //         >
 //           Save Strategy
@@ -928,6 +946,7 @@
 //     </div>
 //   );
 // }
+
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -951,8 +970,9 @@ import {
   searchInstrumentApi,
   fetchConditionMap,
   insertUpdateStrategyApi,
+  getStrategyByIdApi,
 } from "../services/autoStrategyApi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -975,10 +995,11 @@ const formatStrategyName = (strategy: string) => strategy?.toLowerCase() || "";
 
 export default function AddAutostrategy() {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   const [options, setOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false); // Added state for save button loading
+  const [saving, setSaving] = useState(false);
 
   const [underlying, setUnderlying] = useState("equity");
   const [multiLeg, setMultiLeg] = useState(false);
@@ -995,18 +1016,248 @@ export default function AddAutostrategy() {
   const [entryTime, setEntryTime] = useState<any>(dayjs("09:35", "HH:mm"));
   const [exitTime, setExitTime] = useState<any>(dayjs("15:15", "HH:mm"));
 
+  // =====================================================
+  // HELPERS
+  // =====================================================
+
+  const getUnderlyingFromApi = (value: string) => {
+    switch ((value || "").toUpperCase()) {
+      case "EQ":
+        return "equity";
+      case "FUT":
+        return "future";
+      case "INDEX":
+      case "IDX":
+        return "index";
+      default:
+        return "equity";
+    }
+  };
+
+  const getStrategyTypeFromApi = (value: string) => {
+    return value?.toLowerCase() === "positional" ? "positional" : "intraday";
+  };
+
+  const toTitleCase = (value: string) => {
+    if (!value) return "";
+    if (value.toUpperCase() === "EMA") return "EMA";
+    if (value.toUpperCase() === "ATR") return "ATR";
+    if (value.toUpperCase() === "SL") return "SL";
+    if (value.toUpperCase() === "PG") return "PG";
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+  };
+
+  const parseTimeForPicker = (value?: string | null) => {
+    if (!value) return null;
+    const formatted = value.length >= 5 ? value.slice(0, 5) : value;
+    return dayjs(formatted, "HH:mm");
+  };
+
+  const parseSettingsSafe = (settings: any) => {
+    if (!settings) return {};
+    if (typeof settings === "object") return settings;
+    try {
+      return JSON.parse(settings);
+    } catch {
+      return {};
+    }
+  };
+
+  const parseStrategyCheckName = (name: string) => {
+    // Example: "10.entry.pivot.6.1"
+    const parts = name?.split(".") || [];
+    return {
+      strategyId: parts[0] || "0",
+      section: parts[1] ? toTitleCase(parts[1]) : null,
+      strategy: parts[2] ? toTitleCase(parts[2]) : null,
+      version: parts[3] ? Number(parts[3]) : null,
+    };
+  };
+
+  const flattenIndicatorObjectToValues = (
+    indicatorObj: any,
+    occurrenceIndex: number,
+  ) => {
+    const values: Record<string, any> = {};
+    if (!indicatorObj || typeof indicatorObj !== "object") return values;
+
+    Object.entries(indicatorObj).forEach(([indicatorName, config]: any) => {
+      if (!config || typeof config !== "object") return;
+
+      Object.entries(config).forEach(([fieldKey, fieldValue]) => {
+        if (fieldKey === "instrument") return;
+
+        // Nested field object like sma.field.atr
+        if (
+          fieldKey === "field" &&
+          typeof fieldValue === "object" &&
+          fieldValue !== null
+        ) {
+          Object.entries(fieldValue).forEach(([nestedName, nestedConfig]: any) => {
+            if (nestedConfig && typeof nestedConfig === "object") {
+              Object.entries(nestedConfig).forEach(
+                ([nestedFieldKey, nestedFieldValue]) => {
+                  if (nestedFieldKey === "instrument") return;
+                  values[`ind_${nestedName}_${nestedFieldKey}_${occurrenceIndex}`] =
+                    nestedFieldValue;
+                },
+              );
+            }
+          });
+        } else {
+          values[`ind_${indicatorName}_${fieldKey}_${occurrenceIndex}`] =
+            fieldValue;
+        }
+      });
+    });
+
+    return values;
+  };
+
+  // =====================================================
+  // FETCH CONDITION MAP + EDIT MODE DATA
+  // =====================================================
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetchConditionMap();
-        setConditionMap(res?.data?.result || null);
+        const map = res?.data?.result || null;
+        setConditionMap(map);
+
+        if (id) {
+          await loadStrategyForEdit(Number(id));
+        }
       } catch (error) {
         console.error("Error fetching condition map:", error);
       }
     };
 
     fetchData();
-  }, []);
+  }, [id]);
+
+  const loadStrategyForEdit = async (strategyId: number) => {
+    try {
+      const res = await getStrategyByIdApi(strategyId);
+      const result = res?.data?.result;
+
+      const strategyData = result?.strategy?.[0];
+      const strategyChecks = result?.strategy_checks || [];
+
+      if (!strategyData) return;
+
+      // -----------------------------
+      // BASIC FIELDS
+      // -----------------------------
+      setStrategyName(strategyData.name || "");
+      setNote(strategyData.note || "");
+      setMultiLeg(!!strategyData.multileg);
+      setAutomated(!!strategyData.automated);
+      setUnderlying(getUnderlyingFromApi(strategyData.underlying_from));
+      setStrategyType(getStrategyTypeFromApi(strategyData.strategy_type));
+
+      const instrumentId = strategyData.instrument?.[0] || "";
+      setSelectedInstrument(String(instrumentId));
+
+      // Make selected instrument visible in dropdown
+      if (instrumentId) {
+        setOptions((prev) => {
+          const exists = prev.some(
+            (item) => String(item.instrument_id) === String(instrumentId),
+          );
+          if (exists) return prev;
+
+          return [
+            ...prev,
+            {
+              instrument_id: String(instrumentId),
+              DisplayName: strategyData.instrument_name || String(instrumentId),
+            },
+          ];
+        });
+      }
+
+      // -----------------------------
+      // GENERAL ENTRY / EXIT TIME
+      // -----------------------------
+      const filterTimeCheck = strategyChecks.find((item: any) =>
+        item?.name?.toLowerCase().includes(".filter.time.1."),
+      );
+
+      if (filterTimeCheck) {
+        const parsedSettings = parseSettingsSafe(filterTimeCheck.settings);
+
+        if (parsedSettings?.start) {
+          setEntryTime(parseTimeForPicker(parsedSettings.start));
+        }
+
+        if (parsedSettings?.end) {
+          setExitTime(parseTimeForPicker(parsedSettings.end));
+        }
+      }
+
+      // -----------------------------
+      // BUILD RULE BLOCKS
+      // -----------------------------
+      const mappedBlocks = strategyChecks.map((check: any, index: number) => {
+        const parsedName = parseStrategyCheckName(check.name);
+        let parsedSettings = parseSettingsSafe(check.settings);
+
+        // 🔥 backend mismatch handling if needed
+        if (
+          parsedName.section === "Entry" &&
+          parsedName.strategy === "Pivot" &&
+          parsedName.version === 6
+        ) {
+          if (
+            parsedSettings.atr_multiplier !== undefined &&
+            parsedSettings.gap_diff === undefined
+          ) {
+            parsedSettings.gap_diff = parsedSettings.atr_multiplier;
+          }
+        }
+
+        let values: Record<string, any> = {
+          ...parsedSettings,
+        };
+
+        if (Array.isArray(check.indicator)) {
+          check.indicator.forEach((indicatorObj: any, occurrenceIndex: number) => {
+            const flattened = flattenIndicatorObjectToValues(
+              indicatorObj,
+              occurrenceIndex,
+            );
+            values = {
+              ...values,
+              ...flattened,
+            };
+          });
+        }
+
+        return {
+          id: Date.now() + index,
+          section: parsedName.section,
+          strategy: parsedName.strategy,
+          version: parsedName.version,
+          values,
+        };
+      });
+
+      setRuleBlocks(mappedBlocks);
+
+      console.log("========== EDIT MODE DATA ==========");
+      console.log("Strategy Data:", strategyData);
+      console.log("Strategy Checks:", strategyChecks);
+      console.log("Mapped Rule Blocks:", mappedBlocks);
+    } catch (error) {
+      console.error("Error loading strategy for edit:", error);
+      message.error("Failed to load strategy data");
+    }
+  };
+
+  // =====================================================
+  // SEARCH INSTRUMENT
+  // =====================================================
 
   const handleSearchInstrument = async (value: string) => {
     if (!value) return;
@@ -1015,7 +1266,20 @@ export default function AddAutostrategy() {
       const underlyingCode = getUnderlyingCode(underlying);
       const res = await searchInstrumentApi(value, underlyingCode);
       const list = res?.data?.result || [];
-      setOptions(list);
+      setOptions((prev) => {
+        const merged = [...prev];
+        list.forEach((item: any) => {
+          if (
+            !merged.some(
+              (existing) =>
+                String(existing.instrument_id) === String(item.instrument_id),
+            )
+          ) {
+            merged.push(item);
+          }
+        });
+        return merged;
+      });
     } catch (err) {
       console.error("Instrument search error:", err);
     } finally {
@@ -1025,13 +1289,18 @@ export default function AddAutostrategy() {
 
   const selectedInstrumentMeta = useMemo(() => {
     return (
-      options.find((item) => item.instrument_id === selectedInstrument) || null
+      options.find((item) => String(item.instrument_id) === String(selectedInstrument)) ||
+      null
     );
   }, [options, selectedInstrument]);
 
+  // =====================================================
+  // BLOCK MANAGEMENT
+  // =====================================================
+
   const addRuleBlock = () => {
-    setRuleBlocks([
-      ...ruleBlocks,
+    setRuleBlocks((prev) => [
+      ...prev,
       {
         id: Date.now(),
         section: null,
@@ -1043,7 +1312,7 @@ export default function AddAutostrategy() {
   };
 
   const removeRuleBlock = (id: number) => {
-    setRuleBlocks(ruleBlocks.filter((b) => b.id !== id));
+    setRuleBlocks((prev) => prev.filter((b) => b.id !== id));
   };
 
   const updateRuleBlock = (id: number, field: string, value: any) => {
@@ -1051,18 +1320,22 @@ export default function AddAutostrategy() {
       prev.map((block) => {
         if (block.id === id) {
           const newBlock = { ...block, [field]: value };
+
           if (field === "section") {
             newBlock.strategy = null;
             newBlock.version = null;
             newBlock.values = {};
           }
+
           if (field === "strategy") {
             newBlock.version = null;
             newBlock.values = {};
           }
+
           if (field === "version") {
             newBlock.values = {};
           }
+
           return newBlock;
         }
         return block;
@@ -1080,9 +1353,9 @@ export default function AddAutostrategy() {
     );
   };
 
-  // ----------------------------
-  // INDICATOR STRING BUILDERS
-  // ----------------------------
+  // =====================================================
+  // INDICATOR BUILDERS
+  // =====================================================
 
   const buildIndicatorString = (
     indicatorName: string,
@@ -1125,6 +1398,8 @@ export default function AddAutostrategy() {
       );
       const mode =
         getValue("type", indicatorConfig.type?.default ?? "large") || "large";
+
+      // backend may accept type or mode, but your sample save payload used mode
       return `pivot(instrument=${instrument},timeframe=${timeframe},mode=${mode})`;
     }
 
@@ -1236,9 +1511,12 @@ export default function AddAutostrategy() {
   };
 
   const getAllIndicators = () => {
-    // Keep duplicates natively to exactly match payload expectation
     return ruleBlocks.flatMap((block) => getBlockIndicators(block));
   };
+
+  // =====================================================
+  // PAYLOAD BUILDERS
+  // =====================================================
 
   const buildSettingsPayload = (block: any) => {
     const activeConfig =
@@ -1247,7 +1525,7 @@ export default function AddAutostrategy() {
     if (!activeConfig?.settings) return JSON.stringify({ "": null });
 
     const settingKeys = Object.keys(activeConfig.settings);
-    // Render blank configs EXACTLY as requested {"":null}
+
     if (settingKeys.length === 0) return JSON.stringify({ "": null });
 
     const settingsPayload: Record<string, any> = {};
@@ -1267,13 +1545,6 @@ export default function AddAutostrategy() {
         conditionMap?.custom_type?.[settingDef.type] &&
         Array.isArray(conditionMap.custom_type[settingDef.type]);
 
-      // JSON mapping rule: numeric outputs need to be cast to string representations ("1", "11", etc)
-      if (typeof value === "number") {
-        value = String(value);
-      }
-
-      // JSON mapping rule: Types defined natively as arrays in Condition Map must always output as arrays
-      // even if standard selection yields a single value (e.g., {"condition":["below"]})
       if (isCustomArrayType && !Array.isArray(value)) {
         value = [value];
       }
@@ -1299,10 +1570,10 @@ export default function AddAutostrategy() {
 
         return {
           id: 0,
-          name: `0.${section}.${strategy}.${version}.1`,
+          name: `${id ? Number(id) : 0}.${section}.${strategy}.${version}.1`,
           settings: buildSettingsPayload(block),
           indicator: getBlockIndicators(block),
-          strategy_id: 0,
+          strategy_id: id ? Number(id) : 0,
         };
       });
   };
@@ -1311,7 +1582,7 @@ export default function AddAutostrategy() {
     const instrumentId = selectedInstrument ? [String(selectedInstrument)] : [];
 
     const payload = {
-      id: 0,
+      id: id ? Number(id) : 0,
       name: strategyName || "New Strategy",
       instrument: instrumentId,
       pivot_timeframes: ["1"],
@@ -1330,6 +1601,10 @@ export default function AddAutostrategy() {
 
     return payload;
   };
+
+  // =====================================================
+  // UI FIELD RENDERING
+  // =====================================================
 
   const getExtractedIndicators = (indString: string) => {
     return indString.match(/[a-zA-Z0-9_]+/g) || [];
@@ -1448,10 +1723,12 @@ export default function AddAutostrategy() {
         activeConfig.indicator.forEach(
           (indString: string, indIndex: number) => {
             const parsedInds = getExtractedIndicators(indString);
+
             parsedInds.forEach((indName) => {
               const indConfig = conditionMap.indicator[indName];
               if (indConfig) {
                 const fields: any[] = [];
+
                 Object.entries(indConfig).forEach(([ik, iv]: [string, any]) => {
                   if (ik !== "instrument") {
                     fields.push({
@@ -1629,6 +1906,10 @@ export default function AddAutostrategy() {
     );
   };
 
+  // =====================================================
+  // UI
+  // =====================================================
+
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
@@ -1645,6 +1926,7 @@ export default function AddAutostrategy() {
       </div>
 
       <Row gutter={[16, 16]}>
+        {/* Instrument Settings */}
         <Col xs={24} xl={12}>
           <Card
             size="small"
@@ -1672,7 +1954,7 @@ export default function AddAutostrategy() {
                   {options.map((item: any) => (
                     <Select.Option
                       key={item.instrument_id}
-                      value={item.instrument_id}
+                      value={String(item.instrument_id)}
                     >
                       {item.DisplayName}
                     </Select.Option>
@@ -1692,7 +1974,9 @@ export default function AddAutostrategy() {
                   onChange={(e) => {
                     const value = e.target.value;
                     setUnderlying(value);
-                    setSelectedInstrument(null);
+
+                    // reset selected instrument on manual change
+                    setSelectedInstrument("");
                     setOptions([]);
 
                     if (value === "equity" || value === "future") {
@@ -1735,6 +2019,7 @@ export default function AddAutostrategy() {
           </Card>
         </Col>
 
+        {/* General Settings */}
         <Col xs={24} xl={12}>
           <Card
             size="small"
@@ -1792,6 +2077,7 @@ export default function AddAutostrategy() {
           </Card>
         </Col>
 
+        {/* NOTE */}
         <Col span={24}>
           <Card
             size="small"
@@ -1808,6 +2094,7 @@ export default function AddAutostrategy() {
         </Col>
       </Row>
 
+      {/* STRATEGY CONDITIONS */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
           <Title level={5} className="!mb-0 text-gray-700">
@@ -1835,11 +2122,12 @@ export default function AddAutostrategy() {
         </div>
       </div>
 
+      {/* ACTION BUTTONS */}
       <div className="flex justify-end gap-3 mt-6 border-t pt-4">
         <Button onClick={() => navigate("/auto-strategy")}>Cancel</Button>
         <Button
           type="primary"
-          loading={saving} // Added loading state here
+          loading={saving}
           onClick={async () => {
             if (!selectedInstrument) {
               message.error("Please select an instrument first");
@@ -1850,15 +2138,22 @@ export default function AddAutostrategy() {
 
             console.log("========== FINAL API PAYLOAD ==========");
             console.log(finalPayload);
+            console.log(
+              "========== FINAL API PAYLOAD JSON ==========",
+              JSON.stringify(finalPayload, null, 2),
+            );
 
-            // Integrating the API call
             try {
               setSaving(true);
               const response = await insertUpdateStrategyApi(finalPayload);
 
               if (response) {
-                message.success("Strategy saved successfully!");
-                navigate("/auto-strategy"); // Redirects the user back to the list
+                message.success(
+                  id
+                    ? "Strategy updated successfully!"
+                    : "Strategy saved successfully!",
+                );
+                navigate("/auto-strategy");
               }
             } catch (error) {
               console.error("Error saving strategy:", error);
@@ -1868,7 +2163,7 @@ export default function AddAutostrategy() {
             }
           }}
         >
-          Save Strategy
+          {id ? "Update Strategy" : "Save Strategy"}
         </Button>
       </div>
     </div>

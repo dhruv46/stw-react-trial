@@ -46,3 +46,11 @@ export const getStrategyIndicatorApi = (strategyId: number) => {
 export const insertUpdateStrategyApi = (payload: any) => {
   return API.post("/insert_update_strategy", payload);
 };
+
+export const getStrategyByIdApi = (strategyId: number) => {
+  return API.get("/fetch_strategy_data", {
+    params: {
+      strategy_id: strategyId,
+    },
+  });
+};

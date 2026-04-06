@@ -177,6 +177,7 @@ const router = createBrowserRouter([
       { path: "manual-execution", element: <ManualExecutionPage /> },
       { path: "auto-strategy", element: <AutoStrategy /> },
       { path: "add-auto-strategy", element: <AddAutostrategy /> },
+      { path: "edit-strategy/:id", element: <AddAutostrategy /> },
 
       // charts routes
 
