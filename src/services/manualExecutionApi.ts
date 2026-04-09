@@ -115,6 +115,20 @@ export const squareOffManualExecution = (id: number) => {
   return API.post(`/level_square_off?level_id=${id}`);
 };
 
+// ✅ NEW: Fetch Market Timing
+export const fetchMarketTiming = (segment: string | number) => {
+  return API.get(`/fetch_market_timing?segment=${segment}`);
+};
+
+// ✅ NEW: Update Manual Product Type
+export const updateManualProductType = (payload: {
+  manual_execution_id: number;
+  product_type: string;
+  squareoff_time: string;
+}) => {
+  return API.post("/update_manual_product_type", payload);
+};
+
 // --------------------------- OPEN POSITION API's --------------------------
 
 export const fetchManualPositionList = (id: any) => {

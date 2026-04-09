@@ -67,6 +67,8 @@ import {
   getClientMultiplierList,
   insertUpdateClientMultiplier,
   squareOffManualExecution,
+  updateManualProductType,
+  fetchMarketTiming,
 } from "../../services/manualExecutionApi";
 import { getEnabledClientList } from "../../services/SettingsService/userSettingsApi";
 import { FetchStrategyList } from "../../services/SettingsService/userSettingsApi";
@@ -1450,6 +1452,79 @@ const ManualExecution: React.FC = () => {
       message.error("Copy failed");
     }
   };
+  const convertToIST = (timeStr: string) => {
+    if (!timeStr) return null;
+
+    const [hours, minutes, seconds] = timeStr.split(":").map(Number);
+
+    // API time assumed in UTC → convert to IST (+5:30)
+    const date = new Date();
+    date.setUTCHours(hours, minutes, seconds, 0);
+
+    // ✅ Subtract 3 minutes
+    date.setMinutes(date.getMinutes() - 3);
+
+    const istHours = String(date.getHours()).padStart(2, "0");
+    const istMinutes = String(date.getMinutes()).padStart(2, "0");
+    const istSeconds = String(date.getSeconds()).padStart(2, "0");
+
+    return `${istHours}:${istMinutes}:${istSeconds}`;
+  };
+
+  const handleTradeTypeToggle = async (
+    record: ManualExecutionRow,
+    checked: boolean,
+  ) => {
+    try {
+      // checked = true  => positional
+      // checked = false => intraday
+
+      const newProductType = checked ? "positional" : "intraday";
+      let squareoff_time: string | null = null;
+
+      // ✅ Only fetch market timing when changing to intraday
+      if (newProductType === "intraday") {
+        const underlyingId = String(record.underlyingInstrumentId || "");
+        const segment = underlyingId.slice(-2); // last 2 digits
+
+        const timingRes = await fetchMarketTiming(segment);
+        const timingData = timingRes?.data?.result;
+
+        if (timingData) {
+          const selectedCloseTime =
+            timingData.session2_close || timingData.session1_close || null;
+
+          if (selectedCloseTime) {
+            squareoff_time = convertToIST(selectedCloseTime);
+          }
+        }
+      }
+
+      await updateManualProductType({
+        manual_execution_id: record.id,
+        product_type: newProductType,
+        squareoff_time: squareoff_time || "",
+      });
+
+      message.success(`Trade type updated to ${newProductType}`);
+
+      // update table locally
+      setData((prev) =>
+        prev.map((item) =>
+          item.id === record.id
+            ? {
+                ...item,
+                productType: newProductType,
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to update trade type:", error);
+      message.error("Failed to update trade type");
+    }
+  };
+
   type EditableColumnType = ColumnType<ManualExecutionRow> & {
     editable?: boolean;
   };
@@ -1559,6 +1634,30 @@ const ManualExecution: React.FC = () => {
       ),
     },
     {
+      title: "Trade Type",
+      dataIndex: "productType",
+      width: 90,
+      align: "center",
+      render: (_: any, record: ManualExecutionRow) => {
+        const isPositional = record.productType === "positional";
+
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <Tooltip title={isPositional ? "Positional" : "Intraday"}>
+              <Switch
+                checked={isPositional} // ON = positional, OFF = intraday
+                size="small"
+                disabled={record.is_position} // disable if position exists
+                className={isPositional ? "!bg-yellow-500" : "!bg-blue-600"}
+                onChange={(checked) => handleTradeTypeToggle(record, checked)}
+              />
+            </Tooltip>
+          </div>
+        );
+      },
+    },
+
+    {
       title: "Status",
       dataIndex: "status",
       width: 50,
@@ -1618,6 +1717,12 @@ const ManualExecution: React.FC = () => {
             key="copy"
             className="text-blue-500 text-sm cursor-pointer"
             onClick={() => handleCopyExecution(record.id)}
+          />,
+        );
+        icons.push(
+          <ClockCircleOutlined
+            key="clock"
+            className="text-blue-500 text-sm cursor-pointer"
           />,
         );
 
