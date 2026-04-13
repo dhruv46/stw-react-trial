@@ -34,6 +34,7 @@ import {
   Modal,
   Checkbox,
   Tooltip,
+  Popover,
 } from "antd";
 import type { ColumnType } from "antd/es/table";
 import {
@@ -287,6 +288,215 @@ const ManualExecution: React.FC = () => {
   const [clientModalId, setClientModalId] = useState<number | null>(null);
   const [executionId, setExecutionId] = useState<number | null>(null);
   const [executionData, setExecutionData] = useState<any>(null);
+  // ===================== ADD STATES (inside component) =====================
+  const [clockOpenId, setClockOpenId] = useState<number | null>(null);
+  const [clockLoading, setClockLoading] = useState(false);
+  const [clockLimits, setClockLimits] = useState<{
+    min: string;
+    max: string;
+  }>({
+    min: "09:15",
+    max: "15:27",
+  });
+  const [clockValue, setClockValue] = useState<{
+    hour: number;
+    minute: number;
+  }>({
+    hour: 15,
+    minute: 27,
+  });
+
+  // ===================== ADD HELPERS =====================
+
+  // utc -> ist
+  const toIST = (time: string | null) => {
+    if (!time) return null;
+
+    const [h, m, s] = time.split(":").map(Number);
+
+    const total = h * 60 + m + 330; // +5:30
+    const finalHour = Math.floor((total % 1440) / 60);
+    const finalMin = total % 60;
+
+    return `${String(finalHour).padStart(2, "0")}:${String(finalMin).padStart(2, "0")}`;
+  };
+
+  const timeToMinutes = (val: string) => {
+    const [h, m] = val.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const minutesToTime = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  const getMarketTimeRange = (apiData: any) => {
+    const result = apiData?.result || {};
+
+    const open = toIST(result.session1_open);
+    const close1 = toIST(result.session1_close);
+    const close2 = toIST(result.session2_close);
+
+    // if session2 available - show session2_close as default, range is exactly 09:00 to 22:30
+    if (result.session2_close) {
+      return {
+        min: "09:00",
+        max: "22:30",
+        defaultTime: close2 || "22:30",
+      };
+    }
+
+    // only session1 - show session1_close as default, range is session1_open to session1_close
+    const finalClose = close1 || "15:27";
+
+    return {
+      min: open || "09:15",
+      max: finalClose,
+      defaultTime: finalClose,
+    };
+  };
+
+  const clampClockValue = (hour: number, minute: number) => {
+    const current = hour * 60 + minute;
+    const min = timeToMinutes(clockLimits.min);
+    const max = timeToMinutes(clockLimits.max);
+
+    const safe = Math.min(Math.max(current, min), max);
+
+    return {
+      hour: Math.floor(safe / 60),
+      minute: safe % 60,
+    };
+  };
+
+  const isHourIncrementDisabled = () => {
+    const current = clockValue.hour * 60 + clockValue.minute;
+    const max = timeToMinutes(clockLimits.max);
+    const nextValue = (clockValue.hour + 1) * 60 + clockValue.minute;
+    return nextValue > max;
+  };
+
+  const isHourDecrementDisabled = () => {
+    const current = clockValue.hour * 60 + clockValue.minute;
+    const min = timeToMinutes(clockLimits.min);
+    const nextValue = (clockValue.hour - 1) * 60 + clockValue.minute;
+    return nextValue < min;
+  };
+
+  const isMinuteIncrementDisabled = () => {
+    const current = clockValue.hour * 60 + clockValue.minute;
+    const max = timeToMinutes(clockLimits.max);
+    return current + 1 > max;
+  };
+
+  const isMinuteDecrementDisabled = () => {
+    const current = clockValue.hour * 60 + clockValue.minute;
+    const min = timeToMinutes(clockLimits.min);
+    return current - 1 < min;
+  };
+
+  const openClockPopup = async (record: ManualExecutionRow) => {
+    try {
+      setClockLoading(true);
+      setClockOpenId(record.id);
+
+      const segment = String(record.underlyingInstrumentId).slice(-2);
+
+      const res = await fetchMarketTiming(segment);
+
+      const range = getMarketTimeRange(res.data);
+
+      setClockLimits(range);
+
+      let defaultTime = range.defaultTime || range.max;
+
+      // Only use existing entryTime if it was manually set by user (not the initial default)
+      // For now, always use the default closing time
+      // if (record.entryTime && record.entryTime !== "") {
+      //   const existing = record.entryTime.substring(0, 5);
+      //   defaultTime = existing;
+      // }
+
+      const [h, m] = defaultTime.split(":").map(Number);
+
+      setClockValue({
+        hour: h,
+        minute: m,
+      });
+    } catch (error) {
+      message.error("Failed to load market timing");
+    } finally {
+      setClockLoading(false);
+    }
+  };
+
+  const updateClockHour = (delta: number) => {
+    setClockValue((prev) => {
+      const newHour = prev.hour + delta;
+      const val = clampClockValue(newHour, prev.minute);
+      return val;
+    });
+  };
+
+  const updateClockMinute = (delta: number) => {
+    setClockValue((prev) => {
+      const total = prev.hour * 60 + prev.minute + delta;
+
+      const min = timeToMinutes(clockLimits.min);
+      const max = timeToMinutes(clockLimits.max);
+
+      const safe = Math.min(Math.max(total, min), max);
+
+      return {
+        hour: Math.floor(safe / 60),
+        minute: safe % 60,
+      };
+    });
+  };
+
+  const saveClockTime = async (record: ManualExecutionRow) => {
+    try {
+      const finalTime = `${String(clockValue.hour).padStart(2, "0")}:${String(
+        clockValue.minute,
+      ).padStart(2, "0")}:00`;
+
+      await updateManualProductType({
+        manual_execution_id: record.id,
+        product_type: record.productType,
+        squareoff_time: finalTime,
+      });
+
+      message.success("Squareoff time updated");
+
+      fetchExecutions();
+
+      setClockOpenId(null);
+    } catch {
+      message.error("Failed to update time");
+    }
+  };
+
+  const resetClockTime = async (record: ManualExecutionRow) => {
+    try {
+      await updateManualProductType({
+        manual_execution_id: record.id,
+        product_type: record.productType,
+        squareoff_time:
+          record.productType === "positional" ? "" : `${clockLimits.max}:00`,
+      });
+
+      message.success("Time reset");
+
+      fetchExecutions();
+
+      setClockOpenId(null);
+    } catch {
+      message.error("Reset failed");
+    }
+  };
 
   useEffect(() => {
     const refresh = () => fetchExecutions();
@@ -1720,10 +1930,134 @@ const ManualExecution: React.FC = () => {
           />,
         );
         icons.push(
-          <ClockCircleOutlined
+          <Popover
             key="clock"
-            className="text-blue-500 text-sm cursor-pointer"
-          />,
+            trigger="click"
+            open={clockOpenId === record.id}
+            onOpenChange={(open) => {
+              if (open) openClockPopup(record);
+              else setClockOpenId(null);
+            }}
+            placement="bottom"
+            content={
+              <div className="w-[215px] bg-[#ececec] rounded-lg p-3 border border-gray-300">
+                {clockLoading ? (
+                  <div className="text-center py-6">Loading...</div>
+                ) : (
+                  <>
+                    {/* TIME */}
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      {/* HOUR */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          className={`text-[18px] leading-none w-8 h-6 rounded flex items-center justify-center transition-all ${
+                            isHourIncrementDisabled()
+                              ? "text-gray-300 cursor-not-allowed opacity-50"
+                              : "text-gray-600 hover:bg-gray-100 cursor-pointer"
+                          }`}
+                          onClick={() =>
+                            !isHourIncrementDisabled() && updateClockHour(1)
+                          }
+                          disabled={isHourIncrementDisabled()}
+                        >
+                          &#9650;
+                        </button>
+
+                        <div className="w-[62px] h-[44px] bg-white border rounded flex items-center justify-center text-[18px] font-medium">
+                          {String(clockValue.hour).padStart(2, "0")}
+                        </div>
+
+                        <button
+                          className={`text-[18px] leading-none w-8 h-6 rounded flex items-center justify-center transition-all ${
+                            isHourDecrementDisabled()
+                              ? "text-gray-300 cursor-not-allowed opacity-50"
+                              : "text-gray-600 hover:bg-gray-100 cursor-pointer"
+                          }`}
+                          onClick={() =>
+                            !isHourDecrementDisabled() && updateClockHour(-1)
+                          }
+                          disabled={isHourDecrementDisabled()}
+                        >
+                          &#9660;
+                        </button>
+                      </div>
+
+                      <div className="text-[26px] font-medium text-gray-700">
+                        :
+                      </div>
+
+                      {/* MIN */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          className={`text-[18px] leading-none w-8 h-6 rounded flex items-center justify-center transition-all ${
+                            isMinuteIncrementDisabled()
+                              ? "text-gray-300 cursor-not-allowed opacity-50"
+                              : "text-gray-600 hover:bg-gray-100 cursor-pointer"
+                          }`}
+                          onClick={() =>
+                            !isMinuteIncrementDisabled() && updateClockMinute(1)
+                          }
+                          disabled={isMinuteIncrementDisabled()}
+                        >
+                          &#9650;
+                        </button>
+
+                        <div className="w-[62px] h-[44px] bg-white border rounded flex items-center justify-center text-[18px] font-medium">
+                          {String(clockValue.minute).padStart(2, "0")}
+                        </div>
+
+                        <button
+                          className={`text-[18px] leading-none w-8 h-6 rounded flex items-center justify-center transition-all ${
+                            isMinuteDecrementDisabled()
+                              ? "text-gray-300 cursor-not-allowed opacity-50"
+                              : "text-gray-600 hover:bg-gray-100 cursor-pointer"
+                          }`}
+                          onClick={() =>
+                            !isMinuteDecrementDisabled() &&
+                            updateClockMinute(-1)
+                          }
+                          disabled={isMinuteDecrementDisabled()}
+                        >
+                          &#9660;
+                        </button>
+                      </div>
+                    </div>
+                    {/* <div className="text-center text-[10px] text-gray-500 mb-3">
+                      {clockLimits.min} to {clockLimits.max}
+                    </div> */}
+
+                    {/* ACTIONS */}
+                    <div className="flex justify-between px-1">
+                      <button
+                        className="text-blue-600 font-medium"
+                        onClick={() => setClockOpenId(null)}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        className="text-blue-600 font-medium"
+                        onClick={() => saveClockTime(record)}
+                      >
+                        Set
+                      </button>
+
+                      {record.productType === "positional" && (
+                        <button
+                          className="text-red-500 font-medium"
+                          onClick={() => resetClockTime(record)}
+                        >
+                          ↺
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            }
+          >
+            <ClockCircleOutlined className="text-blue-500 text-sm cursor-pointer" />
+          </Popover>,
         );
 
         return <Space size={4}>{icons}</Space>;
