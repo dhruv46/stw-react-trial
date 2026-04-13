@@ -50,6 +50,7 @@ import AddAutostrategy from "./pages/AddAutostrategy";
 import TradingChart from "./chart/TradingViewWidget";
 import MultiChartPage from "./pages/MultiChartPage";
 import OrderModal from "./components/OrderModal";
+import ClosedPositions from "./pages/ClosedPositions";
 
 /* ✅ Layout Component (Shell Removed) */
 
@@ -178,6 +179,7 @@ const router = createBrowserRouter([
       { path: "auto-strategy", element: <AutoStrategy /> },
       { path: "add-auto-strategy", element: <AddAutostrategy /> },
       { path: "edit-strategy/:id", element: <AddAutostrategy /> },
+      { path: "closed-positions", element: <ClosedPositions /> },
 
       // charts routes
 

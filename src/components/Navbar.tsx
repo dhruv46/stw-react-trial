@@ -41,6 +41,7 @@ const nav: NavItem[] = [
     children: [
       { to: "/position?mode=client", label: "By Client" },
       { to: "/position?mode=strategy", label: "By Strategy" },
+      { to: "/closed-positions", label: "Closed Positions" },
     ],
   },
   { to: "/holding", label: "Holdings" },
